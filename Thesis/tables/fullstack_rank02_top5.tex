@@ -1,0 +1,59 @@
+\begin{table}[H]
+\centering
+\small
+\caption{Top five full-stack combinations.}
+\label{tab:fullstack_rank02_top5}
+
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X |c c c c@{}}
+\toprule
+\textbf{Object Model} &
+\textbf{Keypoint Model} &
+\makecell[c]{\textbf{Pass}\\\textbf{mAP$_{1\text{--}5}$}} &
+\makecell[c]{\textbf{$\Delta$Pos}\\\textbf{vs. GT}} &
+\textbf{FPS} &
+\textbf{GPU (\%)} \\
+\midrule
+
+\textbf{26m (80\%, FP16)} &
+\textbf{26n (80\%, FP16)} &
+\textbf{0.697} &
+\textbf{12.22\%} &
+\textbf{6.51} &
+\textbf{39.61} \\
+
+26l (FP16) &
+26n (FP16) &
+0.687 &
+1.11\% &
+5.57 &
+51.50 \\
+
+26l (FP16) &
+26n (KD-26m, 80\%, INT8) &
+0.655 &
+7.71\% &
+5.75 &
+53.39 \\
+
+26m (80\%, FP16) &
+26n (KD-26x, 80\%, FP16) &
+0.583 &
+10.83\% &
+6.49 &
+44.27 \\
+
+26s (Uncompressed) &
+26n (KD-26m, 80\%, INT8) &
+0.574 &
+7.54\% &
+6.18 &
+47.64 \\
+\bottomrule
+\end{tabularx}
+
+\vspace{2pt}
+\begin{minipage}{\textwidth}
+\footnotesize
+\textit{Note:} Model labels use the format \textit{Architecture (Compression Settings)}. Here, 80\% denotes 80\% structured pruning, KD-26m and KD-26x denote knowledge distillation from 26m and 26x teacher models respectively, and FP16 and INT8 denote quantisation. $\Delta$Pos vs. GT gives the absolute difference in dominant-team possession share relative to ground truth.
+\end{minipage}
+\end{table}

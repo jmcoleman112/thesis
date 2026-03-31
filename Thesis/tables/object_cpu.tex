@@ -1,0 +1,21 @@
+\setcellcolorrange{0}{60}{40}
+\begin{table}[H]
+\centering
+\label{tab:yolo_cpu_reduction_combined}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcc cc cc cc}
+\toprule
+& \multicolumn{2}{c}{\textbf{N}} & \multicolumn{2}{c}{\textbf{S}} & \multicolumn{2}{c}{\textbf{M}} & \multicolumn{2}{c}{\textbf{L}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Stage} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} \\
+Uncompressed & 12.86 & 13.81 & 8.55 & 8.83 & 6.20 & 6.11 & 5.75 & 5.48 \\
+\midrule
+Accelerated  & \autocolorcell{26.2}{26.2\%} & \autocolorcell{31.7}{31.7\%} & \autocolorcell{10.5}{10.5\%} & \autocolorcell{17.7}{17.7\%} & \autocolorcell{20.2}{20.2\%} & \autocolorcell{24.4}{24.4\%} & \autocolorcell{24.3}{24.3\%} & \autocolorcell{28.1}{28.1\%} \\
+Distilled    & \autocolorcell{12.2}{12.2\%} & \autocolorcell{16.4}{16.4\%} & \autocolorcell{4.7}{4.7\%} & \autocolorcell{9.9}{9.9\%} & -- & \autocolorcell{11.8}{11.8\%} & \autocolorcell{15.0}{15.0\%} & \autocolorcell{5.8}{5.8\%} \\
+Pruned       & \autocolorcell{10.6}{10.6\%} & -- & \autocolorcell{-2.0}{-2.0\%} & \autocolorcell{3.7}{3.7\%} & \autocolorcell{-1.6}{-1.6\%} & \autocolorcell{2.5}{2.5\%} & \autocolorcell{-1.6}{-1.6\%} & \autocolorcell{-0.7}{-0.7\%} \\
+Quantized    & \autocolorcell{22.2}{22.2\%} & \autocolorcell{29.4}{29.4\%} & \autocolorcell{-12.2}{-12.2\%} & \autocolorcell{-7.4}{-7.4\%} & \autocolorcell{-36.5}{-36.5\%} & \autocolorcell{-32.4}{-32.4\%} & \autocolorcell{-37.4}{-37.4\%} & \autocolorcell{-34.9}{-34.9\%} \\
+\bottomrule
+\end{tabular}
+\caption{Reduction in CPU usage relative to uncompressed YOLO11 and YOLO26 object models.}
+\end{table}

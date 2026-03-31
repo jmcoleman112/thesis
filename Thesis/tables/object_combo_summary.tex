@@ -1,0 +1,37 @@
+\setcellcolorrange{0}{60}{70}
+\begin{table}[H]
+\centering
+\caption{Object combined compression summary.}
+\label{tab:object_combo_summary}
+\small
+\definecolor{rulegray}{gray}{0.88}
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{l c c}
+\toprule
+\textbf{Combination} & \textbf{$\Delta$ mAP$_{50\text{--}95}$} & \textbf{Lat. $\downarrow$} \\
+\midrule
+\textbf{Distilled} & \autocolorcell{-4.4}{-4.4\%} & \autocolorcell{36.1}{36.1\%} \\
+\hspace{1em}Distilled + Accelerated & \autocolorcell{-1.5}{-1.5\%} & \autocolorcell{23.4}{23.4\%} \\
+\hspace{1em}Distilled + FP16 & \autocolorcell{-2.8}{-2.8\%} & \autocolorcell{42.0}{42.0\%} \\
+\hspace{1em}Distilled + INT8 & \autocolorcell{-8.9}{-8.9\%} & \autocolorcell{42.9}{42.9\%} \\
+
+\arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
+
+\textbf{Pruned} & \autocolorcell{-5.8}{-5.8\%} & \autocolorcell{55.9}{55.9\%} \\
+\hspace{1em}Pruned + Accelerated & \autocolorcell{-2.8}{-2.8\%} & \autocolorcell{40.5}{40.5\%} \\
+\hspace{1em}Pruned + FP16 & \autocolorcell{-4.4}{-4.4\%} & \autocolorcell{61.6}{61.6\%} \\
+\hspace{1em}Pruned + INT8 & \autocolorcell{-10.1}{-10.1\%} & \autocolorcell{65.6}{65.6\%} \\
+
+\arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
+
+\textbf{Distilled + Pruned} & \autocolorcell{-3.9}{-3.9\%} & \autocolorcell{26.6}{26.6\%} \\
+\hspace{1em}Distilled + Pruned & \autocolorcell{-1.6}{-1.6\%} & \autocolorcell{8.3}{8.3\%} \\
+\hspace{1em}Distilled + Pruned + Accel. & \autocolorcell{-2.2}{-2.2\%} & \autocolorcell{23.1}{23.1\%} \\
+\hspace{1em}Distilled + Pruned + FP16 & \autocolorcell{-3.3}{-3.3\%} & \autocolorcell{37.7}{37.7\%} \\
+\hspace{1em}Distilled + Pruned + INT8 & \autocolorcell{-8.6}{-8.6\%} & \autocolorcell{37.3}{37.3\%} \\
+\bottomrule
+\end{tabular}
+\par
+\vspace{3pt}
+\noindent\parbox{\columnwidth}{\footnotesize \textit{Note:} Rows ending with ``Accelerated'' or ``Accel.'' refer to TensorRT engine deployment without FP16 or INT8 quantisation. FP16 and INT8 rows are also accelerated deployments, but include reduced-precision quantisation as an additional step.}
+\end{table}

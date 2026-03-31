@@ -1,0 +1,21 @@
+\setcellcolorrange{0}{60}{40}
+\begin{table}[H]
+\centering
+\caption{Average GPU reduction by stage.}
+\label{tab:yolo_object_pose_gpu_reduction_avg}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccccc ccccc}
+\toprule
+& \multicolumn{5}{c}{\textbf{Object}} & \multicolumn{5}{c}{\textbf{Pose}} \\
+\cmidrule(lr){2-6} \cmidrule(lr){7-11}
+\textbf{Stage} & \textbf{N} & \textbf{S} & \textbf{M} & \textbf{L} & \textbf{X} & \textbf{N} & \textbf{S} & \textbf{M} & \textbf{L} & \textbf{X} \\
+Uncompressed & 63.23 & 76.81 & 87.44 & 89.50 & 92.61 & 67.03 & 78.76 & 87.71 & 91.62 & 93.04 \\
+\midrule
+Accelerated & \autocolorcell{17.7}{17.7\%} & \autocolorcell{21.2}{21.2\%} & \autocolorcell{13.9}{13.9\%} & \autocolorcell{10.2}{10.2\%} & \autocolorcell{5.1}{5.1\%} & \autocolorcell{17.7}{17.7\%} & \autocolorcell{19.8}{19.8\%} & \autocolorcell{14.2}{14.2\%} & \autocolorcell{11.9}{11.9\%} & \autocolorcell{9.8}{9.8\%} \\
+Distilled & \autocolorcell{8.5}{8.5\%} & \autocolorcell{10.9}{10.9\%} & \autocolorcell{6.4}{6.4\%} & \autocolorcell{5.0}{5.0\%} & -- & \autocolorcell{19.8}{19.8\%} & \autocolorcell{20.3}{20.3\%} & \autocolorcell{12.6}{12.6\%} & \autocolorcell{11.9}{11.9\%} & -- \\
+Pruned & \autocolorcell{14.5}{14.5\%} & \autocolorcell{12.1}{12.1\%} & \autocolorcell{11.3}{11.3\%} & \autocolorcell{7.6}{7.6\%} & -- & \autocolorcell{23.9}{23.9\%} & \autocolorcell{23.4}{23.4\%} & \autocolorcell{17.0}{17.0\%} & \autocolorcell{17.3}{17.3\%} & -- \\
+Quantized & \autocolorcell{20.8}{20.8\%} & \autocolorcell{32.5}{32.5\%} & \autocolorcell{33.9}{33.9\%} & \autocolorcell{33.5}{33.5\%} & \autocolorcell{24.1}{24.1\%} & \autocolorcell{25.3}{25.3\%} & \autocolorcell{40.7}{40.7\%} & \autocolorcell{36.7}{36.7\%} & \autocolorcell{33.6}{33.6\%} & \autocolorcell{25.9}{25.9\%} \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,18 @@
+\setcellcolorrange{0}{60}{40}
+\begin{table}[H]
+\centering
+\caption{Reduction in latency relative to uncompressed YOLO11 and YOLO26 pose models under hardware acceleration.}
+\label{tab:yolo_pose_latency_accel_only}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcc cc cc cc}
+\toprule
+& \multicolumn{2}{c}{\textbf{N}} & \multicolumn{2}{c}{\textbf{S}} & \multicolumn{2}{c}{\textbf{M}} & \multicolumn{2}{c}{\textbf{L}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Mode} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} \\
+Uncompressed & 61.51 & 66.95 & 102.04 & 113.02 & 204.69 & 213.86 & 258.05 & 266.26 \\
+\midrule
+TensorRT & \autocolorcell{9.9}{9.9\%} & \autocolorcell{18.6}{18.6\%} & \autocolorcell{26.1}{26.1\%} & \autocolorcell{30.3}{30.3\%} & \autocolorcell{35.0}{35.0\%} & \autocolorcell{36.3}{36.3\%} & \autocolorcell{34.0}{34.0\%} & \autocolorcell{36.1}{36.1\%} \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,16 @@
+% !TeX root = ../main.tex
+\section{Proposed Future Work} 
+
+Even with the current progress made, future plans can be made to ensure the project reaches a strong conclusion. This can be separated into end-to-end system functionality improvements, further system optimization analysis, and further model compression analysis. 
+
+\subsection{System Functionality Improvements}
+Proposed system functionality improvements include adding new soccer-related statistics, and introducing/modifying additional web-app hyper-parameters. One high-level statistic that will be explored is pass completion percentages, displaying how often a team's passes are successful. This can be determined by detecting when ball possession moves from one player to another within the same team within a certain period of time. These pieces of information are available within the system already, and so all that is needed is the implementation. 
+
+The system's architecture itself will also be improved. Multiple hyper-parameters should be configurable by the user, including the Intersection over Union (IoU) threshold, an object detection frequency rate, a team assignment interval, and possession radius thresholds. Inference-time model selection will be implemented, allowing users to choose which model architecture to use.
+
+\subsection{System Optimization}
+Future system optimization will primarily target end-to-end latency reduction, with emphasis on both inference and post-inference stages. Object detection interval reduction will be further explored across multiple trained models to quantify the latency/accuracy trade-off. The interval between updating a player's team will also be investigated, as benchmarking indicates that per-frame execution is costly and unnecessary. In addition, replacing the key-point detection model with a classical approach \cite{okuma2004automatic} will be explored to reduce inference overhead. Finally, asynchronous processing between inference and post-processing stages will be examined, to assess potential parallelization benefits that utilise both the CPU and GPU.
+
+
+\subsection{Model Compression}
+Further model compression analysis will extend the preliminary input-resolution scaling work done, by benchmarking it across different trained models. This will include evaluating models that are trained at reduced resolutions, but inferred at higher resolutions to assess robustness to resolution mismatch. Quantization strategies, including post-training quantization and quantization-aware training, will be compared in terms of inference latency, power consumption, and analytical performance on the Jetson Nano. Finally, pruning-based approaches (both structured and unstructured) and knowledge distillation techniques will be investigated to quantify the trade-offs between model complexity, inference speed, and analytical accuracy.

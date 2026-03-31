@@ -1,0 +1,40 @@
+\begin{table}[H]
+\centering
+\begin{minipage}[t]{0.48\linewidth}
+\centering
+\setcellcolorrange{0}{60}{75}
+\caption{Reduction in latency relative to uncompressed YOLO11 object models under FP16 and INT8 quantisation.}
+\label{tab:yolo11_object_latency_quant_only}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Quantisation} & \textbf{N} & \textbf{S} & \textbf{M} & \textbf{L} \\
+\midrule
+Uncompressed & 53.27 & 92.96 & 192.55 & 247.02 \\
+\midrule
+FP16 & \autocolorcell{20.6}{20.6\%} & \autocolorcell{49.6}{49.6\%} & \autocolorcell{63.8}{63.8\%} & \autocolorcell{67.6}{67.6\%} \\
+INT8 & \autocolorcell{17.8}{17.8\%} & \autocolorcell{50.4}{50.4\%} & \autocolorcell{71.1}{71.1\%} & \autocolorcell{73.2}{73.2\%} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\linewidth}
+\centering
+\setcellcolorrange{0}{60}{15}
+\caption{Change in mAP$_{50\text{--}95}$ relative to uncompressed YOLO11 object models under FP16 and INT8 quantisation.}
+\label{tab:yolo11_object_map_quant_only}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Quantisation} & \textbf{N} & \textbf{S} & \textbf{M} & \textbf{L} \\
+\midrule
+Uncompressed & 0.0\% & 0.0\% & 0.0\% & 0.0\% \\
+\midrule
+FP16 & \autocolorcell{0.3}{0.3\%} & \autocolorcell{0.2}{0.2\%} & \autocolorcell{-3.8}{-3.8\%} & \autocolorcell{-3.5}{-3.5\%} \\
+INT8 & \autocolorcell{-5.1}{-5.1\%} & \autocolorcell{-12.9}{-12.9\%} & \autocolorcell{-6.0}{-6.0\%} & \autocolorcell{-14.9}{-14.9\%} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\end{table}

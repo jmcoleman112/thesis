@@ -1,0 +1,21 @@
+\setcellcolorrange{0}{60}{20}
+\begin{table}[H]
+\centering
+\caption{Reduction in temperature relative to uncompressed YOLO11 and YOLO26 pose models.}
+\label{tab:yolo_pose_temp_reduction_combined}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcc cc cc cc}
+\toprule
+& \multicolumn{2}{c}{\textbf{N}} & \multicolumn{2}{c}{\textbf{S}} & \multicolumn{2}{c}{\textbf{M}} & \multicolumn{2}{c}{\textbf{L}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Stage} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} \\
+Uncompressed & 58.08 & 58.24 & 60.98 & 60.96 & 63.02 & 63.30 & 64.42 & 63.85 \\
+\midrule
+Accelerated  & \autocolorcell{14.8}{14.8\%} & \autocolorcell{15.3}{15.3\%} & \autocolorcell{12.6}{12.6\%} & \autocolorcell{9.4}{9.4\%} & \autocolorcell{6.7}{6.7\%} & \autocolorcell{5.4}{5.4\%} & \autocolorcell{5.6}{5.6\%} & \autocolorcell{5.5}{5.5\%} \\
+Distilled    & \autocolorcell{-0.7}{-0.7\%} & \autocolorcell{-0.5}{-0.5\%} & \autocolorcell{-0.3}{-0.3\%} & \autocolorcell{-0.2}{-0.2\%} & -- & \autocolorcell{1.5}{1.5\%} & \autocolorcell{-0.1}{-0.1\%} & \autocolorcell{0.5}{0.5\%} \\
+Pruned       & \autocolorcell{1.0}{1.0\%} & \autocolorcell{0.2}{0.2\%} & \autocolorcell{1.6}{1.6\%} & \autocolorcell{0.5}{0.5\%} & \autocolorcell{1.5}{1.5\%} & -- & \autocolorcell{1.1}{1.1\%} & -- \\
+Quantized    & \autocolorcell{17.4}{17.4\%} & \autocolorcell{15.4}{15.4\%} & \autocolorcell{17.7}{17.7\%} & \autocolorcell{18.3}{18.3\%} & \autocolorcell{15.8}{15.8\%} & \autocolorcell{14.8}{14.8\%} & \autocolorcell{12.0}{12.0\%} & \autocolorcell{11.7}{11.7\%} \\
+\bottomrule
+\end{tabular}
+\end{table}

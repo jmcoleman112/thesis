@@ -1,0 +1,13 @@
+% !TeX root = ../main.tex
+\section{Impact of Research}
+
+With recent scrutiny of Artificial Intelligence within politics and public eye, it is also important to discuss the ethical considerations made in the preparation of this project, as well as the efforts placed towards sustainability.   
+
+\subsection{Ethical Considerations}The first key ethical consideration is the use of individuals in model datasets. The two primary object detection datasets, sourced by \textit{Soccer-Net} and \textit{Roboflow}, are compiled entirely with video and images from the 5 major European soccer leagues. These leagues, and by extension the players involved, allow fair use of all data, as long as it is not used for commercial use, which this project will not be for. This allows these datasets to be ethically used. As a further step in reducing these privacy concerns, the proposed system does not perform any form of personal identification, facial recognition, or biometric analysis. Players are represented solely through abstract bounding boxes and keypoints to ensure that analysis remains focused on game statistics, rather than personal identity.
+
+
+
+\subsection{Sustainability Considerations}
+Deep learning models are often associated with high energy consumption, particularly when trained or deployed in cloud-based environments without consideration for efficiency \cite{desislavov2023trends}. This project directly addresses these concerns by focusing on computational efficiency and edge deployment, aiming to deliver accurate analytics while minimizing energy usage through techniques such as quantization, input resolution scaling, pruning, and knowledge distillation. Deploying inference on an edge device such as the Jetson Orin Nano also reduces the need for data transmission to centralised servers, lowering the energy footprint associated with networking and cloud computation, and aligning with principles of sustainable artificial intelligence.
+
+The last remaining sustainability concern is the required energy cost of repeated model training during this project's experimentation. This will be mitigated by limiting the number of model configurations explored, avoiding redundant training runs, and prioritising model reuse and controlled benchmarking to ensure energy-aware evaluation.

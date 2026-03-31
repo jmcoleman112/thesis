@@ -1,0 +1,21 @@
+\setcellcolorrange{0}{60}{55}
+\begin{table}[H]
+\centering
+\caption{Average power reduction by stage.}
+\label{tab:yolo_object_pose_power_reduction_avg}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lccccc ccccc}
+\toprule
+& \multicolumn{5}{c}{\textbf{Object}} & \multicolumn{5}{c}{\textbf{Pose}} \\
+\cmidrule(lr){2-6} \cmidrule(lr){7-11}
+\textbf{Stage} & \textbf{N} & \textbf{S} & \textbf{M} & \textbf{L} & \textbf{X} & \textbf{N} & \textbf{S} & \textbf{M} & \textbf{L} & \textbf{X} \\
+Uncompressed & 12.77 & 14.99 & 16.53 & 17.00 & 17.62 & 13.30 & 15.07 & 16.52 & 17.16 & 17.65 \\
+\midrule
+Accelerated & \autocolorcell{18.2}{18.2\%} & \autocolorcell{10.9}{10.9\%} & \autocolorcell{3.5}{3.5\%} & \autocolorcell{3.6}{3.6\%} & \autocolorcell{-1.2}{-1.2\%} & \autocolorcell{45.9}{45.9\%} & \autocolorcell{31.9}{31.9\%} & \autocolorcell{17.5}{17.5\%} & \autocolorcell{16.9}{16.9\%} & \autocolorcell{-0.7}{-0.7\%} \\
+Distilled & \autocolorcell{19.1}{19.1\%} & \autocolorcell{13.0}{13.0\%} & \autocolorcell{2.5}{2.5\%} & \autocolorcell{3.8}{3.8\%} & -- & \autocolorcell{-0.7}{-0.7\%} & \autocolorcell{-0.7}{-0.7\%} & \autocolorcell{0.3}{0.3\%} & \autocolorcell{0.0}{0.0\%} & -- \\
+Pruned & \autocolorcell{20.7}{20.7\%} & \autocolorcell{15.6}{15.6\%} & \autocolorcell{6.1}{6.1\%} & \autocolorcell{6.5}{6.5\%} & -- & \autocolorcell{2.8}{2.8\%} & \autocolorcell{1.2}{1.2\%} & \autocolorcell{1.2}{1.2\%} & \autocolorcell{2.1}{2.1\%} & -- \\
+Quantized & \autocolorcell{53.1}{53.1\%} & \autocolorcell{53.1}{53.1\%} & \autocolorcell{45.4}{45.4\%} & \autocolorcell{36.4}{36.4\%} & \autocolorcell{23.7}{23.7\%} & \autocolorcell{52.2}{52.2\%} & \autocolorcell{50.8}{50.8\%} & \autocolorcell{44.0}{44.0\%} & \autocolorcell{34.8}{34.8\%} & \autocolorcell{24.0}{24.0\%} \\
+\bottomrule
+\end{tabular}
+\end{table}

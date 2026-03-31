@@ -1,0 +1,20 @@
+\setcellcolorrange{0}{60}{40}
+\begin{table}[H]
+\centering
+\caption{Reduction in latency relative to uncompressed YOLO11 and YOLO26 pose models under structured pruning.}
+\label{tab:yolo_pose_latency_prune_only}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcc cc cc cc}
+\toprule
+& \multicolumn{2}{c}{\textbf{N}} & \multicolumn{2}{c}{\textbf{S}} & \multicolumn{2}{c}{\textbf{M}} & \multicolumn{2}{c}{\textbf{L}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Pruning} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} \\
+Uncompressed & 61.51 & 66.95 & 102.04 & 113.02 & 204.69 & 213.86 & 258.05 & 266.26 \\
+\midrule
+70\% & \autocolorcell{9.9}{9.9\%} & \autocolorcell{10.4}{10.4\%} & -- & -- & -- & -- & \autocolorcell{21.8}{21.8\%} & -- \\
+80\% & \autocolorcell{10.1}{10.1\%} & \autocolorcell{10.3}{10.3\%} & \autocolorcell{13.8}{13.8\%} & -- & \autocolorcell{18.4}{18.4\%} & -- & \autocolorcell{21.9}{21.9\%} & -- \\
+90\% & \autocolorcell{9.8}{9.8\%} & \autocolorcell{8.9}{8.9\%} & \autocolorcell{11.3}{11.3\%} & \autocolorcell{8.8}{8.8\%} & \autocolorcell{18.4}{18.4\%} & -- & \autocolorcell{21.6}{21.6\%} & -- \\
+\bottomrule
+\end{tabular}
+\end{table}

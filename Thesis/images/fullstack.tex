@@ -1,0 +1,51 @@
+\begin{table*}[t]
+\centering
+\normalsize
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{0.9}
+\caption{Best full-stack model combinations ranked by Pass mAP$_{1\text{--}5}$, benchmarked against the prior SoccerNet system \cite{tracking}.}
+\label{tab:fullstack_eval_top5}
+
+\begin{tabularx}{\textwidth}{@{}
+>{\raggedright\arraybackslash\hsize=0.8\hsize}X
+>{\raggedright\arraybackslash\hsize=1.2\hsize}X
+c c | c c c c@{}}
+\toprule
+\textbf{Object Model} &
+\textbf{Keypoint Model} &
+\makecell[c]{\textbf{$\Delta$mAP$_{1\text{--}5}$}\\\textbf{vs. SoccerNet}} &
+\makecell[c]{\textbf{$\Delta$Pos}\\\textbf{vs. GT}} &
+\textbf{FPS} &
+\textbf{Power (W)} &
+\textbf{Temp ($^\circ$C)} &
+\textbf{GPU (\%)} \\
+\midrule
+
+\makecell[l]{\textbf{26m (80\%, FP16)}} &
+\makecell[l]{\textbf{26n (80\%, FP16)}} &
+\textbf{-5.5\%} & \textbf{12.22\%} & \textbf{13.02} & \textbf{3.95} & \textbf{52.55} & \textbf{39.61} \\
+
+\makecell[l]{26l (FP16)} &
+\makecell[l]{26n (FP16)} &
+-6.5\% & 1.11\% & 11.14 & 4.68 & 53.26 & 51.50 \\
+
+\makecell[l]{26l (FP16)} &
+\makecell[l]{26n (KD-26m, 80\%, INT8)} &
+-7.7\% & 7.71\% & 11.50 & 4.51 & 53.98 & 53.39 \\
+
+\makecell[l]{26m (80\%, FP16)} &
+\makecell[l]{26n (KD-26x, 80\%, FP16)} &
+-12.9\% & 10.83\% & 12.98 & 3.95 & 52.61 & 44.27 \\
+
+\makecell[l]{26s (Uncompressed)} &
+\makecell[l]{26n (KD-26m, 80\%, INT8)} &
+-13.8\% & 7.54\% & 12.36 & 3.63 & 53.14 & 47.64 \\
+\bottomrule
+\end{tabularx}
+
+\vspace{2pt}
+\begin{minipage}{\textwidth}
+\footnotesize
+\textit{Note:} Model labels use the format \textit{Architecture (Compression Settings)}. Here, 80\% denotes 80\% structured pruning, KD-26m and KD-26x denote knowledge distillation from 26m and 26x teacher models respectively, and FP16 and INT8 denote Quantisation. $\Delta$mAP$_{1\text{--}5}$ is measured relative to the SoccerNet baseline system, while $\Delta$Pos vs. GT gives the difference in dominant-team possession relative to ground truth.
+\end{minipage}
+\end{table*}

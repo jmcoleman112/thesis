@@ -1,0 +1,48 @@
+\usepackage[a4paper,left=24mm,right=24mm,top=24mm,bottom=24mm]{geometry}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{float}
+\usepackage{parskip}
+\usepackage{multirow}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[numbers]{natbib}
+\usepackage[table]{xcolor}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{makecell}
+\usepackage[
+    colorlinks=true,
+    citecolor=green,
+    linkcolor=black,
+    urlcolor=blue
+]{hyperref}
+
+\usepackage[table]{xcolor}
+\usepackage{pgfmath}
+
+% tint range in the PDF
+\newcommand{\CellTintMin}{5}
+\newcommand{\CellTintMax}{45}
+
+% data range for scaling
+\newcommand{\CellDataMax}{100}
+
+\newcommand{\setcellcolorrange}[3]{%
+    \renewcommand{\CellTintMin}{#1}%
+    \renewcommand{\CellTintMax}{#2}%
+    \renewcommand{\CellDataMax}{#3}%
+}
+
+\newcommand{\autocolorcell}[2]{%
+    \pgfmathparse{round(min(\CellTintMax, max(\CellTintMin, \CellTintMin + abs(#1)/\CellDataMax * (\CellTintMax-\CellTintMin))))}%
+    \edef\shade{\pgfmathresult}%
+    \ifdim #1pt>0pt
+        \edef\tempcolor{green!\shade}%
+    \else
+        \edef\tempcolor{red!\shade}%
+    \fi
+    \expandafter\cellcolor\expandafter{\tempcolor}#2%
+}

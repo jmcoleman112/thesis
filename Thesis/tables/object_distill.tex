@@ -1,0 +1,21 @@
+\setcellcolorrange{0}{60}{40}
+\begin{table}[H]
+\centering
+\caption{Reduction in latency relative to uncompressed YOLO11 and YOLO26 object models under knowledge distillation.}
+\label{tab:yolo_object_latency_kd_only}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcc cc cc cc}
+\toprule
+& \multicolumn{2}{c}{\textbf{N}} & \multicolumn{2}{c}{\textbf{S}} & \multicolumn{2}{c}{\textbf{M}} & \multicolumn{2}{c}{\textbf{L}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Teacher} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} \\
+Uncompressed & 53.27 & 55.47 & 92.96 & 97.04 & 192.55 & 195.06 & 247.02 & 247.66 \\
+\midrule
+S & \autocolorcell{-5.2}{-5.2\%} & \autocolorcell{3.5}{3.5\%} & -- & -- & -- & -- & -- & -- \\
+M & \autocolorcell{-5.2}{-5.2\%} & \autocolorcell{6.7}{6.7\%} & \autocolorcell{-2.7}{-2.7\%} & \autocolorcell{1.5}{1.5\%} & -- & -- & -- & -- \\
+L & \autocolorcell{-6.2}{-6.2\%} & \autocolorcell{6.6}{6.6\%} & \autocolorcell{-2.8}{-2.8\%} & \autocolorcell{1.4}{1.4\%} & -- & \autocolorcell{-0.5}{-0.5\%} & -- & -- \\
+X & \autocolorcell{-0.6}{-0.6\%} & \autocolorcell{6.5}{6.5\%} & \autocolorcell{-2.5}{-2.5\%} & \autocolorcell{1.4}{1.4\%} & -- & \autocolorcell{0.0}{0.0\%} & \autocolorcell{0.0}{0.0\%} & \autocolorcell{-0.1}{-0.1\%} \\
+\bottomrule
+\end{tabular}
+\end{table}

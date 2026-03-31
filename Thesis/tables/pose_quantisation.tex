@@ -1,0 +1,19 @@
+\setcellcolorrange{0}{60}{75}
+\begin{table}[H]
+\centering
+\caption{Reduction in latency relative to uncompressed YOLO11 and YOLO26 pose models under FP16 and INT8 quantisation.}
+\label{tab:yolo_pose_latency_quant_only}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcc cc cc cc}
+\toprule
+& \multicolumn{2}{c}{\textbf{N}} & \multicolumn{2}{c}{\textbf{S}} & \multicolumn{2}{c}{\textbf{M}} & \multicolumn{2}{c}{\textbf{L}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Precision} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} \\
+Uncompressed & 61.51 & 66.95 & 102.04 & 113.02 & 204.69 & 213.86 & 258.05 & 266.26 \\
+\midrule
+FP16 & \autocolorcell{23.3}{23.3\%} & \autocolorcell{32.8}{32.8\%} & \autocolorcell{49.0}{49.0\%} & \autocolorcell{57.1}{57.1\%} & \autocolorcell{63.5}{63.5\%} & \autocolorcell{66.9}{66.9\%} & \autocolorcell{65.3}{65.3\%} & \autocolorcell{67.5}{67.5\%} \\
+INT8 & \autocolorcell{31.5}{31.5\%} & \autocolorcell{33.9}{33.9\%} & \autocolorcell{54.0}{54.0\%} & \autocolorcell{60.2}{60.2\%} & \autocolorcell{71.0}{71.0\%} & \autocolorcell{73.6}{73.6\%} & \autocolorcell{74.5}{74.5\%} & \autocolorcell{75.5}{75.5\%} \\
+\bottomrule
+\end{tabular}
+\end{table}

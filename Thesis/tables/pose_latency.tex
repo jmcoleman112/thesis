@@ -1,0 +1,21 @@
+\setcellcolorrange{0}{60}{75}   % latency
+\begin{table}[H]
+\centering
+\label{tab:yolo_pose_latency_reduction_combined}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcc cc cc cc}
+\toprule
+& \multicolumn{2}{c}{\textbf{N}} & \multicolumn{2}{c}{\textbf{S}} & \multicolumn{2}{c}{\textbf{M}} & \multicolumn{2}{c}{\textbf{L}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Stage} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} \\
+Uncompressed & 61.51 & 66.95 & 102.04 & 113.02 & 204.69 & 213.86 & 258.05 & 266.26 \\
+\midrule
+Accelerated  & \autocolorcell{9.9}{9.9\%} & \autocolorcell{18.6}{18.6\%} & \autocolorcell{26.1}{26.1\%} & \autocolorcell{30.3}{30.3\%} & \autocolorcell{35.0}{35.0\%} & \autocolorcell{36.3}{36.3\%} & \autocolorcell{34.0}{34.0\%} & \autocolorcell{36.1}{36.1\%} \\
+Distilled    & \autocolorcell{14.0}{14.0\%} & \autocolorcell{16.9}{16.9\%} & \autocolorcell{27.0}{27.0\%} & \autocolorcell{30.4}{30.4\%} & -- & \autocolorcell{36.3}{36.3\%} & \autocolorcell{35.0}{35.0\%} & \autocolorcell{37.3}{37.3\%} \\
+Pruned       & \autocolorcell{22.9}{22.9\%} & \autocolorcell{32.0}{32.0\%} & \autocolorcell{31.1}{31.1\%} & \autocolorcell{36.4}{36.4\%} & \autocolorcell{46.1}{46.1\%} & -- & \autocolorcell{47.9}{47.9\%} & -- \\
+Quantized    & \autocolorcell{31.5}{31.5\%} & \autocolorcell{33.9}{33.9\%} & \autocolorcell{54.0}{54.0\%} & \autocolorcell{60.2}{60.2\%} & \autocolorcell{71.0}{71.0\%} & \autocolorcell{73.6}{73.6\%} & \autocolorcell{74.5}{74.5\%} & \autocolorcell{75.5}{75.5\%} \\
+\bottomrule
+\end{tabular}
+\caption{Reduction in latency relative to uncompressed YOLO11 and YOLO26 pose models.}
+\end{table}

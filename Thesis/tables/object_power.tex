@@ -1,0 +1,21 @@
+\setcellcolorrange{0}{60}{55}
+\begin{table}[H]
+\centering
+\caption{Reduction in power usage relative to uncompressed YOLO11 and YOLO26 object models.}
+\label{tab:yolo_power_reduction_combined}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcc cc cc cc}
+\toprule
+& \multicolumn{2}{c}{\textbf{N}} & \multicolumn{2}{c}{\textbf{S}} & \multicolumn{2}{c}{\textbf{M}} & \multicolumn{2}{c}{\textbf{L}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Stage} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} \\
+Uncompressed & 12.90 & 12.64 & 14.90 & 15.07 & 16.50 & 16.56 & 16.91 & 17.08 \\
+\midrule
+Accelerated  & \autocolorcell{18.0}{18.0\%} & \autocolorcell{18.3}{18.3\%} & \autocolorcell{11.9}{11.9\%} & \autocolorcell{9.9}{9.9\%} & \autocolorcell{4.2}{4.2\%} & \autocolorcell{2.8}{2.8\%} & \autocolorcell{4.1}{4.1\%} & \autocolorcell{3.0}{3.0\%} \\
+Distilled    & \autocolorcell{19.5}{19.5\%} & \autocolorcell{18.7}{18.7\%} & \autocolorcell{15.7}{15.7\%} & \autocolorcell{10.3}{10.3\%} & -- & \autocolorcell{2.5}{2.5\%} & \autocolorcell{3.9}{3.9\%} & \autocolorcell{3.7}{3.7\%} \\
+Pruned       & \autocolorcell{20.7}{20.7\%} & -- & \autocolorcell{18.7}{18.7\%} & \autocolorcell{12.5}{12.5\%} & \autocolorcell{7.1}{7.1\%} & \autocolorcell{5.0}{5.0\%} & \autocolorcell{7.2}{7.2\%} & \autocolorcell{5.8}{5.8\%} \\
+Quantized    & \autocolorcell{53.7}{53.7\%} & \autocolorcell{52.5}{52.5\%} & \autocolorcell{53.4}{53.4\%} & \autocolorcell{52.8}{52.8\%} & \autocolorcell{46.1}{46.1\%} & \autocolorcell{44.6}{44.6\%} & \autocolorcell{39.3}{39.3\%} & \autocolorcell{33.4}{33.4\%} \\
+\bottomrule
+\end{tabular}
+\end{table}

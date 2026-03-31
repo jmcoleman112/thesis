@@ -1,0 +1,8 @@
+% !TeX root = ../main.tex
+\section{Lay Abstract}
+
+This thesis looks at how soccer video analysis can be run on a small, low-power computer instead of relying on expensive cloud or server hardware. The work trained many versions of software that can find players, the ball, and the pitch in match footage, and then tested different ways of making that software smaller, faster, and cheaper to run. These included speeding up the software for the target device, reducing numerical precision, removing less useful parts of the models, and using larger models to help train smaller ones.
+
+The study found that some of these methods gave large speed and power improvements while still keeping the analysis accurate enough to remain useful. The most effective overall approach was to combine efficient deployment methods with carefully chosen compressed models, rather than applying the most aggressive simplifications everywhere.
+
+The final system was able to combine these models into a complete match-analysis pipeline that estimates team possession and detects passes from broadcast video. The best version of the full system reached an effective speed of about 13 frames per second on the target edge device, while keeping GPU usage below 40\%. This shows that practical, on-device soccer analytics is possible on compact hardware, which could help smaller teams, clubs, and broadcasters gain access to lower-cost performance analysis tools.

@@ -1,0 +1,21 @@
+\setcellcolorrange{0}{60}{40}   % GPU
+\begin{table}[H]
+\centering
+\label{tab:yolo_pose_gpu_reduction_combined}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcc cc cc cc}
+\toprule
+& \multicolumn{2}{c}{\textbf{N}} & \multicolumn{2}{c}{\textbf{S}} & \multicolumn{2}{c}{\textbf{M}} & \multicolumn{2}{c}{\textbf{L}} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
+\textbf{Stage} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} & \textbf{11} & \textbf{26} \\
+Uncompressed & 66.02 & 68.04 & 77.70 & 79.81 & 86.62 & 88.79 & 90.92 & 92.32 \\
+\midrule
+Accelerated  & \autocolorcell{13.9}{13.9\%} & \autocolorcell{21.5}{21.5\%} & \autocolorcell{22.0}{22.0\%} & \autocolorcell{17.6}{17.6\%} & \autocolorcell{12.0}{12.0\%} & \autocolorcell{16.4}{16.4\%} & \autocolorcell{12.7}{12.7\%} & \autocolorcell{11.1}{11.1\%} \\
+Distilled    & \autocolorcell{20.9}{20.9\%} & \autocolorcell{18.6}{18.6\%} & \autocolorcell{22.3}{22.3\%} & \autocolorcell{18.2}{18.2\%} & -- & \autocolorcell{12.6}{12.6\%} & \autocolorcell{12.2}{12.2\%} & \autocolorcell{11.6}{11.6\%} \\
+Pruned       & \autocolorcell{22.3}{22.3\%} & \autocolorcell{25.5}{25.5\%} & \autocolorcell{25.4}{25.4\%} & \autocolorcell{21.4}{21.4\%} & \autocolorcell{17.0}{17.0\%} & -- & \autocolorcell{17.3}{17.3\%} & -- \\
+Quantized    & \autocolorcell{27.6}{27.6\%} & \autocolorcell{22.9}{22.9\%} & \autocolorcell{45.2}{45.2\%} & \autocolorcell{36.2}{36.2\%} & \autocolorcell{35.4}{35.4\%} & \autocolorcell{38.0}{38.0\%} & \autocolorcell{34.5}{34.5\%} & \autocolorcell{32.7}{32.7\%} \\
+\bottomrule
+\end{tabular}
+\caption{Reduction in GPU usage relative to uncompressed YOLO11 and YOLO26 pose models.}
+\end{table}
