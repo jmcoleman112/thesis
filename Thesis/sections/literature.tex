@@ -173,14 +173,56 @@ OpenPose-Light \cite{osokin2018lightweight_openpose} & 54.0 & 25.9 & 160.0 \\
 
 Some classical, non-neural approaches also exist, which align on-screen edges with known pitch dimensions to project player positions into real-world coordinates without learned representations \cite{6516867}. While this enables significantly faster throughput and avoids the need for training data, performance is often sensitive to occlusion, inaccurate line detection, and changes in broadcast viewpoint or visual clutter, limiting robustness in real match conditions.
  
-
 \subsection{Literature Review: Current Limitations}
 Despite the rapid progress in computer vision for sports, several significant technical and operational hurdles remain unexplored for real-time edge deployment. As Table \ref{softwarestacks} displayed earlier, common models used today \cite{hmzbo_football_analytics_dl_cv_repo, yang2025soccermaster, mradovic38_football_analysis_repo, roboflow_sports_repo} are computationally intensive, demanding high-end GPU resources (e.g, NVIDIA A100 TensorRT) that are typically unavailable on constrained edge devices like the Jetson Nano. Most systems are designed for batch frame processing, and require 200+ of GFLOPS to produce $<1$ FPS in real-time \cite{yang2025soccermaster, roboflow_sports_repo}. Other systems, while feasible for real time, assume much more powerful infrastructure and still produce only 5-10 FPS on consumer hardware\cite{hmzbo_football_analytics_dl_cv_repo, mradovic38_football_analysis_repo}. This leads to systems and software unsuitable for edge deployment without first applying optimisation or compression. 
 
+\subsection{Modern YOLO Architecture}
+
+Recent YOLO detectors generally follow a consistent \textit{backbone--neck--head} design, where the backbone extracts increasingly abstract visual features, the neck fuses multi-scale information, and the head produces predictions for different object sizes \cite{UltralyticsYOLO}. In these modern variants, the backbone typically begins with stride-2 convolutional layers that progressively reduce spatial resolution while increasing channel depth. This is followed by repeated feature extraction blocks, which differ by version but serve the same general purpose of learning richer hierarchical representations. The neck usually combines high-level semantic information with finer spatial detail through repeated upsampling and concatenation, enabling the detector to preserve both contextual and localization information across scales. Finally, the head produces predictions at three resolutions, corresponding broadly to small, medium, and large objects \cite{UltralyticsYOLO}.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]{images/yolo11.drawio.png}
+    \caption{Simplified overview of the YOLO11 architecture, showing the backbone, neck, and head structure.}
+    \label{fig:yolo11_architecture}
+\end{figure}
+
+
+A major theme in modern YOLO development is that improvements are typically introduced through refinements to internal building blocks rather than through complete architectural redesign. Across recent versions, this has included lighter feature extraction modules, improved multi-scale pooling, and the increasing use of attention mechanisms to strengthen global context modelling. In parallel, head design has also evolved toward more efficient and deployment-oriented inference, with newer models seeking to reduce computational overhead while maintaining strong detection performance. As a result, recent YOLO models can be understood as sharing a common single-stage detection framework while differing in how they optimize feature extraction, attention, training strategy, and inference efficiency \cite{UltralyticsYOLO}.
+
+\subsubsection{YOLO11 Architecture}
+
+YOLO11 retains the standard modern YOLO backbone--neck--head pipeline, but introduces several architectural refinements relative to earlier Ultralytics versions. Its backbone begins with two stride-2 convolutional layers, after which the main feature extraction stages are built around the \textit{C3k2} block rather than the \textit{C2f} block used in earlier models such as YOLOv8. The reviewed paper describes C3k2 as a lighter and more advanced replacement intended to reduce parameter count while preserving strong representational capacity. It also notes that the internal behaviour of C3k2 depends on variant, with larger YOLO11 models consistently using the \textit{C3k} path. This makes YOLO11 an example of the broader trend toward improving efficiency through more carefully designed internal modules rather than major changes to the overall detector layout \cite{UltralyticsYOLO}.
+
+After the backbone, YOLO11 applies \textit{SPPF} and then \textit{C2PSA} before entering the main neck fusion pathway. SPPF provides multi-scale pooling, while C2PSA introduces a self-attention mechanism to improve global feature modelling. Importantly, the attention block is placed only at the lowest-resolution stage in order to limit computational cost. The neck then uses repeated upsampling and concatenation operations to merge deep semantic features with higher-resolution features from earlier backbone stages, before passing them to a three-scale detection head for small, medium, and large object detection. Overall, YOLO11 preserves the established multi-scale YOLO framework, but distinguishes itself through the use of C3k2, C2PSA, and related lightweight convolutional refinements that improve efficiency without fundamentally altering the architecture \cite{UltralyticsYOLO}.
+
+\subsubsection{YOLO26 Architecture}
+
+YOLO26 is architecturally very similar to YOLO11 and preserves the same overall backbone, neck, and head structure, including the use of stride-2 convolutions in the stem, \textit{C3k2} blocks for feature extraction, \textit{SPPF} and \textit{C2PSA} near the bottleneck, and a three-scale detection head \cite{UltralyticsYOLO}. However, the literature describes YOLO26 as an incremental refinement of YOLO11 rather than a direct continuation without change. One architectural modification is the addition of a shortcut connection inside the \textit{SPPF} block, which is intended to improve information flow and stabilize optimization at high semantic levels. A second change is in the final \textit{C3k2} block before detection, where YOLO26 incorporates an attention mechanism through a \textit{PSABlock}, aiming to strengthen global context modelling without a large increase in parameters or latency \cite{UltralyticsYOLO}.
+
+The more substantial differences between YOLO26 and YOLO11 occur in the detection and training pipeline. The paper states that YOLO26 removes \textit{Distribution Focal Loss (DFL)} from the detect block and instead uses direct box regression, simplifying both training and inference. It also adopts a dual-assignment, end-to-end, NMS-free design inspired by YOLOv10, where one-to-many and one-to-one assignments are both used during training, but only the one-to-one path is retained at inference. In addition, YOLO26 introduces \textit{Progressive Loss Balancing (ProgLoss)} and \textit{Small-Target-Aware Label Assignment (STAL)} to improve training stability and enhance learning for small objects, alongside the \textit{MuSGD} optimizer for smoother convergence. Consequently, while YOLO26 looks very similar to YOLO11 at the high level, it differs in several important architectural and training details that push it further toward edge-oriented, end-to-end, and small-object-aware detection \cite{UltralyticsYOLO}.
 
 \subsection{Literature Review: Compression Techniques}
 
 A range of model compression techniques designed to reduce the computational and memory requirements of deep learning models (while preserving acceptable analytical performance) have been explored in literature. Although these techniques have not yet been widely applied to end-to-end football statistic generation systems, they will form a strong foundation for deploying real-time soccer analysis pipelines on edge devices.
+
+
+\subsubsection{Efficiency Techniques: Hardware Acceleration}
+
+Hardware acceleration improves inference efficiency by executing neural networks through runtimes and software stacks that are specifically optimized for the target hardware platform \cite{tensorrt}. Rather than relying on a default framework execution path, accelerated backends can apply graph-level optimizations, fuse operations, select more efficient kernels, and better exploit GPU parallelism. This is particularly important in real-time computer vision, where inference latency directly affects whether a system can operate at interactive or live processing speeds.
+
+A common approach to hardware acceleration in embedded and GPU-based deep learning systems is the use of optimized inference runtimes such as TensorRT. These frameworks convert trained models into deployment-ready representations that are tailored to the hardware on which inference will be performed. By moving much of the optimization work offline, such approaches reduce runtime overhead and improve throughput, making them especially valuable in edge settings where compute and power budgets are constrained.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\linewidth]{images/628b6d9a-fb26-4df1-bafa-aab8cca775f1.png}
+    \caption{Effect of \texttt{tensorrt} application on inference time.}
+    \label{fig:hardware_acceleration_lit}
+\end{figure}
+
+Figure~\ref{fig:hardware_acceleration_lit} illustrates the typical effect of hardware acceleration on inference execution time \cite{tensorrt}. As can be seen, optimized TensorRT-based pipelines consistently reduce latency relative to the default PyTorch implementation, with similar trends also observed for ONNX-based accelerated deployment. This demonstrates that hardware acceleration can provide substantial efficiency improvements without altering the underlying model task, making it an important optimization strategy in the deployment of real-time computer vision systems.
+
 
 \subsubsection{Compression Techniques: Quantization}
 
@@ -210,21 +252,18 @@ Pruning strategies are fundamentally divided into unstructured and structured ap
 
 As can be seen, applying the X-Pruner algorithm reduces the required FLOPS by 28\%, with only a .5\% reduction in accuracy (Top-1). For this reason, pruning will be explored as a method of compressing training soccer computer vision models. 
 
-
-\subsubsection{Efficiency Techniques: Hardware Acceleration}
-
-Hardware acceleration improves inference efficiency by executing neural networks through runtimes and software stacks that are specifically optimized for the target hardware platform \cite{tensorrt}. Rather than relying on a default framework execution path, accelerated backends can apply graph-level optimizations, fuse operations, select more efficient kernels, and better exploit GPU parallelism. This is particularly important in real-time computer vision, where inference latency directly affects whether a system can operate at interactive or live processing speeds.
-
-A common approach to hardware acceleration in embedded and GPU-based deep learning systems is the use of optimized inference runtimes such as TensorRT. These frameworks convert trained models into deployment-ready representations that are tailored to the hardware on which inference will be performed. By moving much of the optimization work offline, such approaches reduce runtime overhead and improve throughput, making them especially valuable in edge settings where compute and power budgets are constrained.
+\subsubsection{Compression Techniques: Input Resolution Scaling}
+Input resolution scaling reduces computational and memory footprints by lowering the spatial dimensions of the images or tokens processed by a model. Since the complexity of Convolutional Neural Networks and Vision Transformers typically scales quadratically with input resolution, even modest downsizing can yield substantial improvements in inference throughput and energy efficiency \cite{morlier2025input}. Figure \ref{fig:inputreslit} displays model characteristics (FLOPS and memory usage) before and after input resolution scaling is applied. 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\linewidth]{images/628b6d9a-fb26-4df1-bafa-aab8cca775f1.png}
-    \caption{Effect of \texttt{tensorrt} application on inference time.}
-    \label{fig:hardware_acceleration_lit}
+    \includegraphics[width=0.6\linewidth]{images/inputresresearch.png}
+    \caption{Required Memory Vs. FLOPS when Input Resolution Scaling is Applied \cite{morlier2025input}}
+    \label{fig:inputreslit}
 \end{figure}
 
-Figure~\ref{fig:hardware_acceleration_lit} illustrates the typical effect of hardware acceleration on inference execution time \cite{tensorrt}. As can be seen, optimized TensorRT-based pipelines consistently reduce latency relative to the default PyTorch implementation, with similar trends also observed for ONNX-based accelerated deployment. This demonstrates that hardware acceleration can provide substantial efficiency improvements without altering the underlying model task, making it an important optimization strategy in the deployment of real-time computer vision systems.
+
+As can be seen by Figure \ref{fig:inputreslit}, applying input resolution scaling often reduces the required FLOPS by $\sim$2x, with slight improvements in required memory. However, this technique may introduce a major accuracy/efficiency trade-off, as reducing resolution compromises the detection of small objects \cite{morlier2025input, zheng2025_review_football_cv}. In the soccer domain, where the ball often occupies fewer than 100 pixels, resolution is a primary determinant of performance; for instance, increasing resolution from 640px to 1200px has been shown to improve ball detection recall by up to 96\% \cite{10756443}. To mitigate these losses, implementations often utilise training-evaluation discrepancies, training models on smaller resized crops but evaluating at slightly higher resolutions to recover analytical performance \cite{morlier2025input}.
 
 \subsubsection{Compression Techniques: Knowledge Distillation}
 Knowledge distillation is another model compression technique, in which a compact "student" model is trained to replicate the performance of a high-capacity "teacher" model. Unlike standard training, the student is optimised using softened output distributions (logits) or intermediate feature representations produced by the teacher, which contain richer information than hard ground-truth labels \cite{Kaleem2024ACR, inbook}. Knowledge transfer can be categorised into three types: response-based, which focuses on the final output probabilities; feature-based, which aims to mimic the teacher's internal feature maps to capture implicit patterns; and relation-based, which teaches the student the relationships between different data samples or layers \cite{Kaleem2024ACR}. 

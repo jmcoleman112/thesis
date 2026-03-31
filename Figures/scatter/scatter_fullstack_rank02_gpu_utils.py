@@ -5,9 +5,8 @@ Shared plotting logic for rank-02 full-stack combo scatter charts.
 Data source:
   research/sweep_replay/replay_20260319_204802/rank_02/batch_20260319_215159/batch_summary.csv
 
-Two metrics are supported:
-  - Pass mAP1-5
-  - Possession accuracy, derived as 100 - DeltaPosPct
+The helper supports derived y-metrics such as possession accuracy and raw
+hardware/runtime x-metrics such as GPU usage, latency, power, and temperature.
 
 By default, the script shows the figure and then uses the standard save dialog
 to save into Figures/produced_images. Pass --save-name to save directly.
@@ -34,9 +33,17 @@ CSV_PATH = (
 OUT_DIR = Path(__file__).resolve().parents[1] / "produced_images"
 
 FONT_FAMILY = "Times New Roman"
-FIG_WIDTH_IN = 7.2
-FIG_HEIGHT_IN = 4.2
-POINT_SIZE = 38
+# Single-panel size for half-width export.
+FIG_WIDTH_IN = 3.35
+FIG_HEIGHT_IN = 3.25
+# Two-panel size for full-width 1x2 exports with shared legends.
+PAIR_FIG_WIDTH_IN = 7.1
+PAIR_FIG_HEIGHT_IN = 4.75
+POINT_SIZE = 26
+X_AXIS_MARGIN_FRAC = 0.28
+Y_AXIS_MARGIN_FRAC = 0.16
+
+DERIVED_COLS = {"delta_pos_pct", "possession_accuracy_pct"}
 
 OBJECT_STYLES = [
     ("obj26m_p80_fp16_", "26m (80%, FP16)", "#1f77b4"),
@@ -74,109 +81,8 @@ def _to_float(row: dict[str, object], key: str) -> float | None:
         return None
 
 
-def load_data(csv_path: Path = CSV_PATH) -> list[dict[str, object]]:
-    if not csv_path.exists():
-        raise FileNotFoundError(f"CSV not found: {csv_path}")
-
-    with csv_path.open(newline="", encoding="utf-8") as handle:
-        rows = list(csv.DictReader(handle))
-
-    required = {
-        "combo_name",
-        "mAP1-5",
-        "GPU (%)",
-        "pred_passes_club1",
-        "pred_passes_total",
-        "gt_passes_club1",
-        "gt_passes_total",
-    }
-    if not rows:
-        raise ValueError("Batch summary is empty.")
-
-    missing = [col for col in required if col not in rows[0]]
-    if missing:
-        raise ValueError(f"CSV missing required columns: {missing}")
-
-    usable: list[dict[str, object]] = []
-    for row in rows:
-        map_1_5 = _to_float(row, "mAP1-5")
-        gpu_pct = _to_float(row, "GPU (%)")
-        pred_club1 = _to_float(row, "pred_passes_club1")
-        pred_total = _to_float(row, "pred_passes_total")
-        gt_club1 = _to_float(row, "gt_passes_club1")
-        gt_total = _to_float(row, "gt_passes_total")
-        combo_name = str(row["combo_name"])
-
-        if None in (map_1_5, gpu_pct, pred_club1, pred_total, gt_club1, gt_total):
-            continue
-        if not pred_total or not gt_total:
-            continue
-
-        delta_pos_pct = abs((pred_club1 / pred_total) - (gt_club1 / gt_total)) * 100.0
-        possession_accuracy_pct = 100.0 - delta_pos_pct
-        object_label, object_color = _object_style(combo_name)
-        pose_label, pose_marker = _pose_style(combo_name)
-
-        usable.append(
-            {
-                "combo_name": combo_name,
-                "mAP1-5": map_1_5,
-                "GPU (%)": gpu_pct,
-                "delta_pos_pct": delta_pos_pct,
-                "possession_accuracy_pct": possession_accuracy_pct,
-                "object_label": object_label,
-                "object_color": object_color,
-                "pose_label": pose_label,
-                "pose_marker": pose_marker,
-            }
-        )
-
-    if not usable:
-        raise ValueError("No usable rows found in batch summary.")
-
-    usable.sort(key=lambda row: float(row["mAP1-5"]), reverse=True)
-    return usable
-
-
-def plot_metric(
-    rows: list[dict[str, object]],
-    *,
-    y_col: str,
-    y_label: str,
-    title: str,
-) -> tuple[object, object]:
-    import matplotlib as mpl
-    import matplotlib.pyplot as plt
+def _build_legend_handles():
     from matplotlib.lines import Line2D
-    from matplotlib.ticker import FormatStrFormatter
-
-    mpl.rcParams["font.family"] = FONT_FAMILY
-    mpl.rcParams["font.serif"] = [FONT_FAMILY]
-
-    fig, ax = plt.subplots(figsize=(FIG_WIDTH_IN, FIG_HEIGHT_IN), dpi=300)
-
-    for row in rows:
-        ax.scatter(
-            float(row["GPU (%)"]),
-            float(row[y_col]),
-            s=POINT_SIZE,
-            color=str(row["object_color"]),
-            marker=str(row["pose_marker"]),
-            edgecolors="black",
-            linewidths=0.35,
-            alpha=0.88,
-        )
-
-    ax.set_xlabel("GPU Usage (%)", fontsize=8)
-    ax.set_ylabel(y_label, fontsize=8)
-    ax.set_title(title, fontsize=8, pad=3)
-    ax.tick_params(axis="both", labelsize=7)
-    ax.grid(True, linestyle="--", alpha=0.4)
-
-    if y_col == "mAP1-5":
-        ax.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
-    else:
-        ax.yaxis.set_major_formatter(FormatStrFormatter("%.1f"))
 
     object_handles = [
         Line2D(
@@ -206,18 +112,215 @@ def plot_metric(
         )
         for _, label, marker in POSE_STYLES
     ]
+    return object_handles, pose_handles
+
+
+def _build_pair_legend_handles():
+    from matplotlib.lines import Line2D
+
+    pair_object_handles = [
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="none",
+            markerfacecolor=color,
+            markeredgecolor="black",
+            markeredgewidth=0.35,
+            markersize=5,
+            label=label,
+        )
+        for label, color in [
+            ("26m p80 FP16", "#1f77b4"),
+            ("26l FP16", "#ff7f0e"),
+            ("26s Base", "#2ca02c"),
+            ("26s FP16", "#d62728"),
+        ]
+    ]
+    pair_pose_handles = [
+        Line2D(
+            [0],
+            [0],
+            marker=marker,
+            color="black",
+            markerfacecolor="white",
+            markeredgecolor="black",
+            markersize=5,
+            linewidth=0,
+            label=label,
+        )
+        for label, marker in [
+            ("26n p80 FP16", "s"),
+            ("26n FP16", "o"),
+            ("26n KD26m p80 INT8", "^"),
+            ("26n KD26x p80 FP16", "D"),
+        ]
+    ]
+    return pair_object_handles + pair_pose_handles
+
+
+def _apply_axis_limits(
+    ax,
+    rows: list[dict[str, object]],
+    *,
+    col: str,
+    axis: str,
+    margin_frac: float,
+    min_pad: float = 0.0,
+) -> None:
+    values = [float(row[col]) for row in rows]
+    if not values:
+        return
+
+    value_min = min(values)
+    value_max = max(values)
+    value_span = value_max - value_min
+    pad = max(value_span * margin_frac, min_pad)
+    if value_span == 0:
+        fallback_pad = 0.5 if axis == "x" else 0.05
+        pad = max(pad, max(abs(value_min) * margin_frac, fallback_pad))
+
+    if axis == "x":
+        ax.set_xlim(value_min - pad, value_max + pad)
+    elif axis == "y":
+        ax.set_ylim(value_min - pad, value_max + pad)
+    else:
+        raise ValueError(f"Unsupported axis: {axis}")
+
+
+def load_data(*, metric_cols: set[str] | None = None, csv_path: Path = CSV_PATH) -> list[dict[str, object]]:
+    if not csv_path.exists():
+        raise FileNotFoundError(f"CSV not found: {csv_path}")
+
+    with csv_path.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+
+    metric_cols = metric_cols or set()
+    extra_required = {col for col in metric_cols if col not in DERIVED_COLS}
+
+    required = {
+        "combo_name",
+        "pred_passes_club1",
+        "pred_passes_total",
+        "gt_passes_club1",
+        "gt_passes_total",
+    } | extra_required
+    if not rows:
+        raise ValueError("Batch summary is empty.")
+
+    missing = [col for col in required if col not in rows[0]]
+    if missing:
+        raise ValueError(f"CSV missing required columns: {missing}")
+
+    usable: list[dict[str, object]] = []
+    for row in rows:
+        pred_club1 = _to_float(row, "pred_passes_club1")
+        pred_total = _to_float(row, "pred_passes_total")
+        gt_club1 = _to_float(row, "gt_passes_club1")
+        gt_total = _to_float(row, "gt_passes_total")
+        combo_name = str(row["combo_name"])
+
+        if None in (pred_club1, pred_total, gt_club1, gt_total):
+            continue
+        if not pred_total or not gt_total:
+            continue
+
+        parsed_metrics: dict[str, float] = {}
+        failed_metric = False
+        for col in extra_required:
+            value = _to_float(row, col)
+            if value is None:
+                failed_metric = True
+                break
+            parsed_metrics[col] = value
+        if failed_metric:
+            continue
+
+        delta_pos_pct = abs((pred_club1 / pred_total) - (gt_club1 / gt_total)) * 100.0
+        possession_accuracy_pct = 100.0 - delta_pos_pct
+        object_label, object_color = _object_style(combo_name)
+        pose_label, pose_marker = _pose_style(combo_name)
+
+        usable.append(
+            {
+                "combo_name": combo_name,
+                **parsed_metrics,
+                "delta_pos_pct": delta_pos_pct,
+                "possession_accuracy_pct": possession_accuracy_pct,
+                "object_label": object_label,
+                "object_color": object_color,
+                "pose_label": pose_label,
+                "pose_marker": pose_marker,
+            }
+        )
+
+    if not usable:
+        raise ValueError("No usable rows found in batch summary.")
+
+    if "mAP1-5" in extra_required:
+        usable.sort(key=lambda row: float(row["mAP1-5"]), reverse=True)
+    return usable
+
+
+def plot_metric(
+    rows: list[dict[str, object]],
+    *,
+    x_col: str,
+    x_label: str,
+    y_col: str,
+    y_label: str,
+    title: str,
+    x_tick_fmt: str | None = None,
+    y_tick_fmt: str | None = None,
+) -> tuple[object, object]:
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import FormatStrFormatter
+
+    mpl.rcParams["font.family"] = FONT_FAMILY
+    mpl.rcParams["font.serif"] = [FONT_FAMILY]
+
+    fig, ax = plt.subplots(figsize=(FIG_WIDTH_IN, FIG_HEIGHT_IN), dpi=300)
+
+    for row in rows:
+        ax.scatter(
+            float(row[x_col]),
+            float(row[y_col]),
+            s=POINT_SIZE,
+            color=str(row["object_color"]),
+            marker=str(row["pose_marker"]),
+            edgecolors="black",
+            linewidths=0.35,
+            alpha=0.88,
+        )
+
+    _apply_axis_limits(ax, rows, col=x_col, axis="x", margin_frac=X_AXIS_MARGIN_FRAC)
+    _apply_axis_limits(ax, rows, col=y_col, axis="y", margin_frac=Y_AXIS_MARGIN_FRAC)
+
+    ax.set_xlabel(x_label, fontsize=8)
+    ax.set_ylabel(y_label, fontsize=8)
+    ax.set_title(title, fontsize=8, pad=3)
+    ax.tick_params(axis="both", labelsize=7)
+    ax.grid(True, linestyle="--", alpha=0.4)
+
+    if x_tick_fmt:
+        ax.xaxis.set_major_formatter(FormatStrFormatter(x_tick_fmt))
+    if y_tick_fmt:
+        ax.yaxis.set_major_formatter(FormatStrFormatter(y_tick_fmt))
+
+    object_handles, pose_handles = _build_legend_handles()
 
     object_legend = ax.legend(
         handles=object_handles,
         title="Object model",
         frameon=False,
-        fontsize=6,
-        title_fontsize=6,
+        fontsize=5,
+        title_fontsize=5,
         loc="upper center",
-        bbox_to_anchor=(0.5, -0.18),
+        bbox_to_anchor=(0.5, -0.22),
         ncol=2,
         borderaxespad=0.0,
-        columnspacing=0.9,
+        columnspacing=0.8,
         handletextpad=0.4,
     )
     ax.add_artist(object_legend)
@@ -226,19 +329,98 @@ def plot_metric(
         handles=pose_handles,
         title="Pose model",
         frameon=False,
-        fontsize=6,
-        title_fontsize=6,
+        fontsize=5,
+        title_fontsize=5,
         loc="upper center",
-        bbox_to_anchor=(0.5, -0.33),
+        bbox_to_anchor=(0.5, -0.42),
         ncol=2,
         borderaxespad=0.0,
-        columnspacing=0.9,
+        columnspacing=0.8,
         handletextpad=0.4,
     )
 
     fig.tight_layout(pad=0.1)
-    fig.subplots_adjust(left=0.12, right=0.995, bottom=0.43, top=0.92)
+    fig.subplots_adjust(left=0.16, right=0.995, bottom=0.54, top=0.90)
     return fig, ax
+
+
+def plot_metric_pair(
+    rows: list[dict[str, object]],
+    *,
+    left_panel: dict[str, object],
+    right_panel: dict[str, object],
+    y_col: str,
+    y_label: str,
+    y_tick_fmt: str | None = None,
+) -> tuple[object, object]:
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import FormatStrFormatter
+
+    mpl.rcParams["font.family"] = FONT_FAMILY
+    mpl.rcParams["font.serif"] = [FONT_FAMILY]
+
+    fig, axes = plt.subplots(
+        1,
+        2,
+        figsize=(PAIR_FIG_WIDTH_IN, PAIR_FIG_HEIGHT_IN),
+        dpi=300,
+        sharey=True,
+    )
+
+    for ax, panel in zip(axes, (left_panel, right_panel)):
+        x_col = str(panel["x_col"])
+        for row in rows:
+            ax.scatter(
+                float(row[x_col]),
+                float(row[y_col]),
+                s=POINT_SIZE,
+                color=str(row["object_color"]),
+                marker=str(row["pose_marker"]),
+                edgecolors="black",
+                linewidths=0.35,
+                alpha=0.88,
+            )
+
+        _apply_axis_limits(
+            ax,
+            rows,
+            col=x_col,
+            axis="x",
+            margin_frac=float(panel.get("x_margin_frac", X_AXIS_MARGIN_FRAC)),
+            min_pad=float(panel.get("x_min_pad", 0.0)),
+        )
+
+        ax.set_xlabel(str(panel["x_label"]), fontsize=8)
+        ax.set_title(str(panel["title"]), fontsize=8, pad=3)
+        ax.tick_params(axis="both", labelsize=7)
+        ax.grid(True, linestyle="--", alpha=0.4)
+
+        x_tick_fmt = panel.get("x_tick_fmt")
+        if x_tick_fmt:
+            ax.xaxis.set_major_formatter(FormatStrFormatter(str(x_tick_fmt)))
+
+    axes[0].set_ylabel(y_label, fontsize=8)
+    _apply_axis_limits(axes[0], rows, col=y_col, axis="y", margin_frac=Y_AXIS_MARGIN_FRAC)
+    if y_tick_fmt:
+        axes[0].yaxis.set_major_formatter(FormatStrFormatter(y_tick_fmt))
+
+    pair_handles = _build_pair_legend_handles()
+    fig.legend(
+        handles=pair_handles,
+        frameon=False,
+        fontsize=5.2,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 0.035),
+        ncol=len(pair_handles),
+        borderaxespad=0.0,
+        columnspacing=0.8,
+        handletextpad=0.35,
+    )
+
+    fig.tight_layout(pad=0.12)
+    fig.subplots_adjust(left=0.08, right=0.995, bottom=0.22, top=0.88, wspace=0.16)
+    return fig, axes
 
 
 def _save_direct(fig, name: str) -> Path:
@@ -255,10 +437,14 @@ def _save_direct(fig, name: str) -> Path:
 
 def run_metric_plot(
     *,
+    x_col: str,
+    x_label: str,
     y_col: str,
     y_label: str,
     title: str,
     default_name: str,
+    x_tick_fmt: str | None = None,
+    y_tick_fmt: str | None = None,
 ) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--save-name", help="Save directly to Figures/produced_images without prompting.")
@@ -266,8 +452,17 @@ def run_metric_plot(
     args = parser.parse_args()
 
     try:
-        rows = load_data()
-        fig, _ = plot_metric(rows, y_col=y_col, y_label=y_label, title=title)
+        rows = load_data(metric_cols={x_col, y_col})
+        fig, _ = plot_metric(
+            rows,
+            x_col=x_col,
+            x_label=x_label,
+            y_col=y_col,
+            y_label=y_label,
+            title=title,
+            x_tick_fmt=x_tick_fmt,
+            y_tick_fmt=y_tick_fmt,
+        )
         import matplotlib.pyplot as plt
     except Exception as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -275,6 +470,55 @@ def run_metric_plot(
 
     print("Rows used:", len(rows))
     print("CSV:", CSV_PATH)
+    print("X metric:", x_col)
+    print("Y metric:", y_col)
+
+    if args.save_name:
+        _save_direct(fig, args.save_name)
+
+    if not args.no_show:
+        plt.show()
+        if not args.save_name:
+            prompt_save_figure(fig, default_name=default_name)
+
+    return 0
+
+
+def run_metric_pair_plot(
+    *,
+    left_panel: dict[str, object],
+    right_panel: dict[str, object],
+    y_col: str,
+    y_label: str,
+    default_name: str,
+    y_tick_fmt: str | None = None,
+) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--save-name", help="Save directly to Figures/produced_images without prompting.")
+    parser.add_argument("--no-show", action="store_true", help="Do not display the matplotlib window.")
+    args = parser.parse_args()
+
+    metric_cols = {str(left_panel["x_col"]), str(right_panel["x_col"]), y_col}
+
+    try:
+        rows = load_data(metric_cols=metric_cols)
+        fig, _ = plot_metric_pair(
+            rows,
+            left_panel=left_panel,
+            right_panel=right_panel,
+            y_col=y_col,
+            y_label=y_label,
+            y_tick_fmt=y_tick_fmt,
+        )
+        import matplotlib.pyplot as plt
+    except Exception as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
+    print("Rows used:", len(rows))
+    print("CSV:", CSV_PATH)
+    print("X metrics:", left_panel["x_col"], right_panel["x_col"])
+    print("Y metric:", y_col)
 
     if args.save_name:
         _save_direct(fig, args.save_name)
