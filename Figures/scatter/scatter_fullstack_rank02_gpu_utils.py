@@ -37,9 +37,10 @@ FONT_FAMILY = "Times New Roman"
 FIG_WIDTH_IN = 3.35
 FIG_HEIGHT_IN = 3.25
 # Two-panel size for full-width 1x2 exports with shared legends.
-PAIR_FIG_WIDTH_IN = 7.1
-PAIR_FIG_HEIGHT_IN = 4.75
+PAIR_FIG_WIDTH_IN = 6.35
+PAIR_FIG_HEIGHT_IN = 5.10
 POINT_SIZE = 26
+PAIR_POINT_SIZE = 34
 X_AXIS_MARGIN_FRAC = 0.28
 Y_AXIS_MARGIN_FRAC = 0.16
 
@@ -156,7 +157,7 @@ def _build_pair_legend_handles():
             ("26n KD26x p80 FP16", "D"),
         ]
     ]
-    return pair_object_handles + pair_pose_handles
+    return pair_object_handles, pair_pose_handles
 
 
 def _apply_axis_limits(
@@ -356,6 +357,7 @@ def plot_metric_pair(
     import matplotlib as mpl
     import matplotlib.pyplot as plt
     from matplotlib.ticker import FormatStrFormatter
+    from matplotlib.ticker import MaxNLocator
 
     mpl.rcParams["font.family"] = FONT_FAMILY
     mpl.rcParams["font.serif"] = [FONT_FAMILY]
@@ -374,12 +376,12 @@ def plot_metric_pair(
             ax.scatter(
                 float(row[x_col]),
                 float(row[y_col]),
-                s=POINT_SIZE,
+                s=PAIR_POINT_SIZE,
                 color=str(row["object_color"]),
                 marker=str(row["pose_marker"]),
                 edgecolors="black",
-                linewidths=0.35,
-                alpha=0.88,
+                linewidths=0.45,
+                alpha=0.9,
             )
 
         _apply_axis_limits(
@@ -391,35 +393,53 @@ def plot_metric_pair(
             min_pad=float(panel.get("x_min_pad", 0.0)),
         )
 
-        ax.set_xlabel(str(panel["x_label"]), fontsize=8)
-        ax.set_title(str(panel["title"]), fontsize=8, pad=3)
-        ax.tick_params(axis="both", labelsize=7)
+        ax.set_xlabel(str(panel["x_label"]), fontsize=10)
+        ax.set_title(str(panel["title"]), fontsize=10, pad=4)
+        ax.tick_params(axis="both", labelsize=8.5)
+        ax.xaxis.set_major_locator(MaxNLocator(nbins=5))
+        ax.yaxis.set_major_locator(MaxNLocator(nbins=6))
         ax.grid(True, linestyle="--", alpha=0.4)
 
         x_tick_fmt = panel.get("x_tick_fmt")
         if x_tick_fmt:
             ax.xaxis.set_major_formatter(FormatStrFormatter(str(x_tick_fmt)))
 
-    axes[0].set_ylabel(y_label, fontsize=8)
+    axes[0].set_ylabel(y_label, fontsize=10)
     _apply_axis_limits(axes[0], rows, col=y_col, axis="y", margin_frac=Y_AXIS_MARGIN_FRAC)
     if y_tick_fmt:
         axes[0].yaxis.set_major_formatter(FormatStrFormatter(y_tick_fmt))
 
-    pair_handles = _build_pair_legend_handles()
-    fig.legend(
-        handles=pair_handles,
+    pair_object_handles, pair_pose_handles = _build_pair_legend_handles()
+    object_legend = fig.legend(
+        handles=pair_object_handles,
+        title="Object model",
         frameon=False,
-        fontsize=5.2,
+        fontsize=6.8,
+        title_fontsize=6.8,
         loc="lower center",
-        bbox_to_anchor=(0.5, 0.035),
-        ncol=len(pair_handles),
+        bbox_to_anchor=(0.5, 0.09),
+        ncol=4,
         borderaxespad=0.0,
-        columnspacing=0.8,
+        columnspacing=0.9,
+        handletextpad=0.35,
+    )
+    fig.add_artist(object_legend)
+    fig.legend(
+        handles=pair_pose_handles,
+        title="Pose model",
+        frameon=False,
+        fontsize=6.8,
+        title_fontsize=6.8,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 0.02),
+        ncol=4,
+        borderaxespad=0.0,
+        columnspacing=0.9,
         handletextpad=0.35,
     )
 
     fig.tight_layout(pad=0.12)
-    fig.subplots_adjust(left=0.08, right=0.995, bottom=0.22, top=0.88, wspace=0.16)
+    fig.subplots_adjust(left=0.11, right=0.995, bottom=0.28, top=0.89, wspace=0.22)
     return fig, axes
 
 
@@ -430,7 +450,7 @@ def _save_direct(fig, name: str) -> Path:
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     out_path = OUT_DIR / cleaned
-    fig.savefig(out_path, dpi=200, bbox_inches="tight")
+    fig.savefig(out_path, dpi=300, bbox_inches="tight")
     print(f"Saved figure to: {out_path}")
     return out_path
 

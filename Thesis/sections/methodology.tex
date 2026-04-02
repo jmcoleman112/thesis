@@ -1,7 +1,7 @@
 % !TeX root = ../main.tex
 \section{Methodology}
 \label{sec:methodology}
-The methodology will be focussed into three parts; the training of initial models, the compression of these models, and the creation and optimisation of a full-stack system to utilise these models to apply high-level analysis of broadcast soccer film. 
+In line with the project aims and background literature review defined above, a methodology was created and followed, including specific tools and strategies that were utilised. This section will be focussed primarily on the training of initial models, the compression of these models, and the creation and optimisation of a full-stack system to utilise these models to apply high-level analysis of broadcast soccer film. 
 
 
 \subsection{Model Training Procedure}
@@ -37,7 +37,7 @@ For INT8 engine generation, calibration data was provided during export to estim
 
 
 \subsubsection{Pruning}
-Pruning was implemented as structured channel pruning using NVIDIA ModelOpt FastNAS \cite{248452, nvidia_modelopt}. This approach searches for a reduced channel configuration under an explicit FLOP constraint, producing smaller and more efficient network variants while preserving a deployment-compatible architecture. In this work, trained YOLO checkpoints were pruned using target FLOP reductions of 90\%, 80\%, and 70\% where feasible. After this, fine-tune training was applied under the same procedure as the uncompressed models, but for only 100 epochs. 
+Pruning was implemented as structured channel pruning using NVIDIA ModelOpt FastNAS \cite{248452, nvidia_modelopt}. This approach searches for a reduced channel configuration under an explicit FLOP constraint, producing smaller and more efficient network variants while preserving a deployment-compatible architecture. In this work, trained YOLO checkpoints were pruned using target FLOP reductions of 90\%, 80\%, and 70\% where feasible. After this, fine-tune training was applied under the same procedure as the uncompressed models, but for only 100 epochs. Structured pruning was utilised instead of unstructured weight pruning as it produces models that remain more suitable for practical deployment on embedded hardware. By removing entire channels rather than individual weights, the resulting networks preserve dense tensor operations and standard layer structures, which are more easily accelerated by inference frameworks such as TensorRT \cite{nvidia_modelopt}. 
 
 \subsubsection{Knowledge Distillation}
 Knowledge distillation was implemented as a teacher--student training strategy, in which a smaller YOLO student model was optimised using both the standard detection loss and an additional distillation loss. A larger pretrained YOLO teacher model was kept fixed throughout training, with no gradient updates, and both models processed the same input image at each iteration. Rather than distilling only the final predictions, supervision was applied at intermediate feature levels by matching corresponding stages in the teacher and student backbone and neck. Since these paired feature maps did not always have the same channel dimensions, lightweight alignment layers were used to project the student features into the teacher feature space before the distillation loss was computed. This allowed the student to retain its lightweight architecture while benefiting from the stronger internal representations learned by the teacher.
@@ -51,7 +51,7 @@ where $\lambda_t$ followed a decaying schedule, with a larger value early in tra
 \subsection{Evaluation Metrics and Benchmarking Protocol}
 \label{subsec:evaluation}
 
-Model accuracy was evaluated primarily using $\mathrm{mAP}_{50\text{--}95}$ on a validation subset \cite{Everingham2010}. $\mathrm{mAP}_{50\text{--}95}$ is a standard object detection metric that measures how well predicted objects match the ground truth in both classification and localisation, describing the detection performance averaged across Intersection over Union (IoU) thresholds from 0.50 to 0.95 in steps of 0.05. This makes it a stricter measure than evaluating at a single threshold. It is expressed mathematically as:
+Model accuracy was evaluated primarily using the $\mathrm{mAP}_{50\text{--}95}$ metric on a validation subset \cite{Everingham2010}. $\mathrm{mAP}_{50\text{--}95}$ is a standard object detection metric that measures how well predicted objects match the ground truth in both classification and localisation, describing the detection performance averaged across Intersection over Union (IoU) thresholds from 0.50 to 0.95 in steps of 0.05. This makes it a stricter measure than evaluating at a single threshold. It is expressed mathematically as:
 
 \[
 \mathrm{mAP}_{50\text{--}95}
@@ -77,13 +77,58 @@ The remaining non-dominated models form the Pareto frontier and were used to sho
 
 
 \subsection{Post-Processing and Higher-level Statistic Generation}
+\label{subsec:postprocessing}
 
-The trained and compressed object and keypoint models were then used in a post-processing pipeline to allow for higher-level football analytics to be generated. This stage converted raw model outputs into more complex match statistics: specifically team identity, player possession, team possession, and pass events. To support this, the 2D pitch-coordinate locations of players and the ball were estimated using a homography computed with RANSAC \cite{ransac} and temporally stabilised with exponential smoothing. For this projection, the bottom-centre point of each player bounding box, corresponding approximately to the player’s feet, and the ball centre were used. Object detections were associated across frames using the ByteTrack MOT algorithm \cite{zhang2022bytetrack}.
+Following model inference, a post-inference pipeline was applied to generate higher-level football analytics. Through this pipeline, object identities, pitch-referenced player locations, team assignments, ball possession, pass events, and player speed estimates could be derived from the raw detector outputs.
 
-Team identity was assigned from upper-body player crops with pitch pixels suppressed. The dominant jersey colour was estimated using 2-cluster K-means clustering \cite{ZhengLiu2012ColorRecognition}, and the resulting dominant colour was then matched, after temporal smoothing, to manually predefined team colour palettes.
+\subsubsection{Multi-object Tracking}
 
-Player possession was estimated from the projected locations of players and the ball, with possession assigned to the nearest player within a predefined distance threshold. Passes were defined as valid same-team transitions in control between different players.
+Object detections for players, goalkeepers, referees, and the ball were maintained across frames using the ByteTrack multiple-object tracking (MOT) algorithm \cite{zhang2022bytetrack}. This allowed the system to assign a persistent identity to each detected object over time. ByteTrack was particularly suitable for this task because it does not rely only on high-confidence detections, and instead attempts to recover any unmatched tracks using lower-confidence detections. This helps maintain track continuity during short occlusions, missed detections, or brief drops in detector confidence, which are common in soccer footage due to player overlap, rapid motion, and small object size. A simplified version of the ByteTrack association process is outlined in Algorithm~\ref{alg:bytetrack} below.
 
+\begin{algorithm}[H]
+\caption{Simplified ByteTrack association process \cite{zhang2022bytetrack}}
+\label{alg:bytetrack}
+\begin{algorithmic}[1]
+\Require tracks, detections
+\State pred\_tracks = predict\_tracks(tracks)
+\State high\_detects, low\_detects = filter\_detections(detections)
+
+\Statex
+\State matched\_high, unmatched\_tracks, unmatched\_high = link(pred\_tracks, high\_detects)
+\State update\_tracks(matched\_high)
+\Statex
+\State matched\_low, unmatched\_tracks, unmatched\_low=link(unmatched\_tracks, low\_detects)
+\State update\_tracks(matched\_low)
+\Statex
+\For{detection in unmatched\_high}
+    \State create\_new\_track(detection)
+\EndFor
+\Statex
+\For{track in unmatched\_tracks}
+    \State mark\_as\_lost(track)
+\EndFor
+\Statex
+\State remove\_expired\_tracks(tracks)
+\end{algorithmic}
+\end{algorithm}
+
+The availability of these player and ball identities across frames was essential for all later stages of the system, particularly team assignment, possession tracking, pass detection, and player speed estimation. 
+
+\subsubsection{Homography Estimation}
+
+To recover 2d coordinate information of the desired objects, the output of pitch keypoint models were matched to a predefined top-down pitch template. A homography mapping image coordinates to canonical pitch coordinates was then estimated using RANSAC \cite{ransac}, which provided robustness to missing or incorrectly localised keypoints. (smoothed over time to reduce noise from poor/failed inferences). For player and goalkeeper detections, the bottom-centre point of the bounding box was used as the projected location, as this point most closely approximates foot placement on the playing surface. For the ball, the bounding-box centre was used. 
+
+\subsubsection{Player and Goalkeeper Team Assignment}
+
+Team identity was determined from player appearance using K-means clustering analysis \cite{ZhengLiu2012ColorRecognition}. For each tracked player or goalkeeper, an upper-body crop of their bounding box was extracted and pitch-like green pixels were suppressed before colour estimation was performed. The dominant jersey colour was then estimated using a two-cluster K-means procedure \cite{ZhengLiu2012ColorRecognition}. The extracted colour for each track was temporally smoothed across frames to avoid noise from blurring, occlusion, and lighting variations. The smoothed colour representation is then compared against manually specified team colours (with separate colour references for outfield players and goalkeepers). This allows a per-player team identity estimate to be maintained across long-form video sequences.
+
+\subsubsection{Possession, Pass, and Speed Estimation}
+
+Ball possession was estimated using the projected top-down coordinates of the ball and nearby players. At each frame, possession was assigned to the nearest valid player or goalkeeper within a predefined control radius, with smoothing across frames and thresholds used to reduce possession flickering. Frame-level possession assignments were accumulated over time to compute team possession percentages.
+
+Passes could then be recorded when possession changed from one player to a different player on the same team, with smoothing and thresholds again applied to reduce false positives from occlusion. If possession instead changed across teams, the event was treated as the beginning of a new possession sequence rather than a pass.
+
+Player speed was estimated from consecutive 2D pitch positions. For each player, distance moved between frames was converted from pitch pixels to metres and smoothed to give distance travelled and speed.
 \subsection{Full-Stack System Overview}
 \label{subsec:system_overview}
 
@@ -95,4 +140,4 @@ Player possession was estimated from the projected locations of players and the 
   \label{fig:fullstack_system}
 \end{figure}
 
-Figure~\ref{fig:fullstack_system} illustrates how the trained object detection models, keypoint localisation models, and post-inference processing were integrated into the proposed full-stack system. Each video frame was processed both by an object detector and a pitch keypoint detector, with these intermediate outputs then consumed by the post-inference algorithms described previously. Inference could be performed either on every frame or at a configurable interval, to allow further hardware efficiency customisation. Confidence thresholds were applied to object detection, pitch keypoint detection, team-colour assignment, and pass classification.
+Figure~\ref{fig:fullstack_system} illustrates how the trained object detection models, keypoint localisation models, and post-inference processing were integrated into the proposed full-stack system. Each video frame was processed both by an object detector and a pitch keypoint detector, with these intermediate outputs then consumed by the post-inference algorithms described previously. Inference could be performed either on every frame or at a configurable interval, to allow further hardware efficiency customisation. As stated earlier, confidence thresholds were applied to object detection, pitch keypoint detection, team-colour assignment, and pass classification.

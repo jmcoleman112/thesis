@@ -1,7 +1,8 @@
 % !TeX root = ../main.tex
+% chktex-file 36
 \section{Background Literature Review}
 
-To achieve these aims, a background literature review will be performed to ensure that the proposed methodology described later utilises best modern practices and research, and targets a clear gap in research. Focus will be placed on an overview of the problem, common approaches and prevalent models, and common model compression techniques. 
+To achieve the aims laid out in the Introduction, a background literature review has be performed to ensure that the methodology described later utilises best modern practices and research, and targets a clear gap in research. Focus will be placed on an overview of the problem, common approaches and prevalent models, common model compression techniques, and common full-stack system techniques. 
 
 \subsection{Literature Review: Overview} As discussed in the introduction, modern sporting preparation and broadcast have put a larger emphasis on quantitative data than opinion-based analysis, especially with the rise of next-generation tracking and sensor technologies \cite{ReinMemmert2016}. Some of the most useful of these implementations explore tracking key statistics such as team pass completions percentages, possession, and team formation analysis through the use of object detection/tracking and pitch recognition \cite{zheng2025_review_football_cv,Mooney2014CVSports}. However, emphasis in this niche has been largely placed on accuracy over computational efficiency or real-time analysis, with some designed software systems requiring over 515B Floating Point Operations Per Second (FLOPS) \cite{roboflow_sports_repo}, which edge devices cannot maintain.
 
@@ -9,7 +10,7 @@ To achieve these aims, a background literature review will be performed to ensur
 
 Alongside object detection for players, a variety of different key-point detection strategies are often used to detect the location on screen of relevant pitch markings, such as the corners, penalty box, and midfield \cite{10846339}. With this and the player bounding boxes from earlier, an optical perspective transformation known as homography estimation can be applied to calculate the co-ordinate location on the pitch of each object of interest \cite{dubrofsky2009homography}. This allows player speed, distance, and position statistics to be generated.
 
-The reported features and statistics of some implemented software solutions are displayed below in Table \ref{softwarestacks}. Note that reported FPS values are taken from original implementations, and are not directly comparable across hardware. Also note that model accuracy and size values ($\text{mAP}_{50}$, FLOPS, Parameters) cannot be explored here, due to significant differences in software structures (both in amount of models, model output information, and implementation output). Instead, the accuracy and size of the models used in these will be explored explicitly in subsections \textbf{Multiple Object Tracking} and \textbf{Key-point Detection} later.
+The reported features and statistics of some implemented software solutions are displayed below in Table \ref{softwarestacks}. Note that reported FPS values are taken from original implementations, and are not directly comparable across hardware. Also note that model accuracy and size values ($\text{mAP}_{50}$, FLOPS, Parameters) cannot be explored here, due to significant differences in software structures (both in amount of models, model output information, and implementation output). Instead, the accuracy and size of the models used in these will be explored explicitly in subsections \textbf{Object Detection} and \textbf{Key-point Detection}.
 
 \begin{table}[H]
     \centering
@@ -68,7 +69,7 @@ The reported features and statistics of some implemented software solutions are 
 
 
 
-\subsubsection{Common Approaches: Multiple Object Tracking}
+\subsubsection{Common Approaches: Object Detection}
 The object detection portion of the above solutions are commonly addressed using YOLO (You Only Look Once) models \cite{Redmon_2016_CVPR}. YOLO models utilise a single pass for both localisation and detection, resulting in a low-latency detection architecture ideal for real-time analysis. This has been previously explored in soccer analysis, with models producing $\text{mAP}_{50}$ results of up to 87\%, and $\text{mAP}_{50-95}$ of up to 64.9\% using labelled broadcast soccer videos \cite{10756443}. $\text{mAP}_{50-95}$ represents the model's $\text{mAP}$ for all IoU thresholds between 50\%-95\%. Another potential real-time detection model is the Faster R-CNN model. Faster R-CNN utilises a 2-stage pipeline, which first separates frames into region proposal networks, before performing classification on a second pass \cite{7485869}. While used in post-match processing, Faster R-CNN is likely not applicable to real-time scenarios, due to this heavy 2-stage inference process. Table \ref{modelparams} below summarizes some commonly used models for real-time object detection. Note that latency cannot be compared directly here, as models have not been benchmarked on equal GPUs.
 
 \begin{table}[H]
@@ -100,13 +101,15 @@ A number of commonly used and publicly available datasets exist for the training
 
 \begin{table}[H]
 \centering
+\caption{Commonly Used Datasets in Literature}
 \label{tab:bbox_comparison}
-\begin{minipage}[t]{0.48\textwidth}
+
+\begin{minipage}[t]{0.31\textwidth}
 \centering
 \caption*{SoccerNet Dataset \cite{tracking}}
 \begin{tabular}{lc}
 \toprule
-\textbf{Class} & \textbf{Bounding Boxes} \\
+\textbf{Class} & \textbf{Boundings } \\
 \midrule
 Player       & 2,992,173 \\
 Goalkeeper   & 130,109 \\
@@ -118,12 +121,29 @@ Ball         & 215,156 \\
 \end{tabular}
 \end{minipage}
 \hfill
-\begin{minipage}[t]{0.48\textwidth}
+\begin{minipage}[t]{0.31\textwidth}
 \centering
 \caption*{Roboflow Dataset \cite{roboflow}}
 \begin{tabular}{lc}
 \toprule
-\textbf{Class} & \textbf{Bounding Boxes} \\
+\textbf{Class} & \textbf{Boundings} \\
+\midrule
+Player       & 7,427 \\
+Goalkeeper   & 288 \\
+Referee      & 863 \\
+Ball         & 327 \\
+\midrule
+\textbf{Total} & \textbf{8,905} \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.31\textwidth}
+\centering
+\caption*{Football Analytics \cite{mradovic38_football_analysis_repo}}
+\begin{tabular}{lc}
+\toprule
+\textbf{Class} & \textbf{Boundings} \\
 \midrule
 Player       & 13,241 \\
 Goalkeeper   & 473 \\
@@ -134,7 +154,7 @@ Ball         & 565 \\
 \bottomrule
 \end{tabular}
 \end{minipage}
-\caption{Commonly Used Datasets in Literature}
+
 \end{table}
 
 The tracking of these bounding boxes is then implemented (MOT); modern approaches often use the SORT algorithm, in which object identities are maintained using Kalman filters for motion prediction and the Hungarian algorithm for object association \cite{7533003}. 
@@ -176,9 +196,9 @@ Some classical, non-neural approaches also exist, which align on-screen edges wi
 \subsection{Literature Review: Current Limitations}
 Despite the rapid progress in computer vision for sports, several significant technical and operational hurdles remain unexplored for real-time edge deployment. As Table \ref{softwarestacks} displayed earlier, common models used today \cite{hmzbo_football_analytics_dl_cv_repo, yang2025soccermaster, mradovic38_football_analysis_repo, roboflow_sports_repo} are computationally intensive, demanding high-end GPU resources (e.g, NVIDIA A100 TensorRT) that are typically unavailable on constrained edge devices like the Jetson Nano. Most systems are designed for batch frame processing, and require 200+ of GFLOPS to produce $<1$ FPS in real-time \cite{yang2025soccermaster, roboflow_sports_repo}. Other systems, while feasible for real time, assume much more powerful infrastructure and still produce only 5-10 FPS on consumer hardware\cite{hmzbo_football_analytics_dl_cv_repo, mradovic38_football_analysis_repo}. This leads to systems and software unsuitable for edge deployment without first applying optimisation or compression. 
 
-\subsection{Modern YOLO Architecture}
+\subsection{Literature Review: Modern YOLO Architecture}
 
-Recent YOLO detectors generally follow a consistent \textit{backbone--neck--head} design, where the backbone extracts increasingly abstract visual features, the neck fuses multi-scale information, and the head produces predictions for different object sizes \cite{UltralyticsYOLO}. In these modern variants, the backbone typically begins with stride-2 convolutional layers that progressively reduce spatial resolution while increasing channel depth. This is followed by repeated feature extraction blocks, which differ by version but serve the same general purpose of learning richer hierarchical representations. The neck usually combines high-level semantic information with finer spatial detail through repeated upsampling and concatenation, enabling the detector to preserve both contextual and localization information across scales. Finally, the head produces predictions at three resolutions, corresponding broadly to small, medium, and large objects \cite{UltralyticsYOLO}.
+Recent YOLO detectors, such as the Ultralytics YOLO11 and YOLO26 families, generally follow a backbone-neck-head design \cite{UltralyticsYOLO}. In this, the backbone extracts features from the image at increasing levels of abstraction. The neck then combines these various features so that both fine spatial detail and higher-level semantic information can be used by the detection head. To do so, the backbone utilises a variety of convolutional layers (Conv) and variations ofCSP bottlenecks with 3 convolutions (C3K2). The neck uses upsampling, concatentation, and C3K2 blocks, allowing the head to produce predictions at three resolutions, corresponding broadly to small, medium, and large objects \cite{UltralyticsYOLO}. A simplified version of this architecture is displayed below in Figure \ref{fig:yolo11_architecture}.
 
 
 \begin{figure}[H]
@@ -189,19 +209,12 @@ Recent YOLO detectors generally follow a consistent \textit{backbone--neck--head
 \end{figure}
 
 
-A major theme in modern YOLO development is that improvements are typically introduced through refinements to internal building blocks rather than through complete architectural redesign. Across recent versions, this has included lighter feature extraction modules, improved multi-scale pooling, and the increasing use of attention mechanisms to strengthen global context modelling. In parallel, head design has also evolved toward more efficient and deployment-oriented inference, with newer models seeking to reduce computational overhead while maintaining strong detection performance. As a result, recent YOLO models can be understood as sharing a common single-stage detection framework while differing in how they optimize feature extraction, attention, training strategy, and inference efficiency \cite{UltralyticsYOLO}.
+This structures allows for an efficient way in which to scale model size based on user needs. Five variants have been defined (Nano (n), Small (s), Medium (m), Large (l), Extra-Large (x)), which utilise the same architecture, but vary in their depth and width scaling, and therefore in parameter count and computational complexity \cite{UltralyticsYOLO}. 
 
-\subsubsection{YOLO11 Architecture}
+\subsubsection{YOLO11 vs. YOLO26 Architecture}
 
-YOLO11 retains the standard modern YOLO backbone--neck--head pipeline, but introduces several architectural refinements relative to earlier Ultralytics versions. Its backbone begins with two stride-2 convolutional layers, after which the main feature extraction stages are built around the \textit{C3k2} block rather than the \textit{C2f} block used in earlier models such as YOLOv8. The reviewed paper describes C3k2 as a lighter and more advanced replacement intended to reduce parameter count while preserving strong representational capacity. It also notes that the internal behaviour of C3k2 depends on variant, with larger YOLO11 models consistently using the \textit{C3k} path. This makes YOLO11 an example of the broader trend toward improving efficiency through more carefully designed internal modules rather than major changes to the overall detector layout \cite{UltralyticsYOLO}.
-
-After the backbone, YOLO11 applies \textit{SPPF} and then \textit{C2PSA} before entering the main neck fusion pathway. SPPF provides multi-scale pooling, while C2PSA introduces a self-attention mechanism to improve global feature modelling. Importantly, the attention block is placed only at the lowest-resolution stage in order to limit computational cost. The neck then uses repeated upsampling and concatenation operations to merge deep semantic features with higher-resolution features from earlier backbone stages, before passing them to a three-scale detection head for small, medium, and large object detection. Overall, YOLO11 preserves the established multi-scale YOLO framework, but distinguishes itself through the use of C3k2, C2PSA, and related lightweight convolutional refinements that improve efficiency without fundamentally altering the architecture \cite{UltralyticsYOLO}.
-
-\subsubsection{YOLO26 Architecture}
-
-YOLO26 is architecturally very similar to YOLO11 and preserves the same overall backbone, neck, and head structure, including the use of stride-2 convolutions in the stem, \textit{C3k2} blocks for feature extraction, \textit{SPPF} and \textit{C2PSA} near the bottleneck, and a three-scale detection head \cite{UltralyticsYOLO}. However, the literature describes YOLO26 as an incremental refinement of YOLO11 rather than a direct continuation without change. One architectural modification is the addition of a shortcut connection inside the \textit{SPPF} block, which is intended to improve information flow and stabilize optimization at high semantic levels. A second change is in the final \textit{C3k2} block before detection, where YOLO26 incorporates an attention mechanism through a \textit{PSABlock}, aiming to strengthen global context modelling without a large increase in parameters or latency \cite{UltralyticsYOLO}.
-
-The more substantial differences between YOLO26 and YOLO11 occur in the detection and training pipeline. The paper states that YOLO26 removes \textit{Distribution Focal Loss (DFL)} from the detect block and instead uses direct box regression, simplifying both training and inference. It also adopts a dual-assignment, end-to-end, NMS-free design inspired by YOLOv10, where one-to-many and one-to-one assignments are both used during training, but only the one-to-one path is retained at inference. In addition, YOLO26 introduces \textit{Progressive Loss Balancing (ProgLoss)} and \textit{Small-Target-Aware Label Assignment (STAL)} to improve training stability and enhance learning for small objects, alongside the \textit{MuSGD} optimizer for smoother convergence. Consequently, while YOLO26 looks very similar to YOLO11 at the high level, it differs in several important architectural and training details that push it further toward edge-oriented, end-to-end, and small-object-aware detection \cite{UltralyticsYOLO}.
+The newer YOLO26 family differs from YOLO11 through a series of incremental modifications \cite{UltralyticsYOLO}. Architecturally, YOLO26 introduces new shortcut connection within the neck, and introduces a new attention mechanism in the final C3k2 stage before detection. In the detection pipeline, YOLO11 utilises Distribution Focal Loss, whereas YOLO26 instead uses direct box regression and an NMS-free framework. YOLO26 also incorporates Progressive Loss Balancing, Small-Target-Aware Label Assignment, and the MuSGD optimizer. These changes indicate that YOLO26 is more focused towards stable training, small-object performance, and efficient edge-oriented deploy-
+ment than YOLO11, but the high-level architecture remains largely unchanged \cite{UltralyticsYOLO}.
 
 \subsection{Literature Review: Compression Techniques}
 
