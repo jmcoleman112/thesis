@@ -44,12 +44,13 @@ FIGURE_HEIGHT_IN = (A4_LANDSCAPE_HEIGHT_MM - (2 * VERTICAL_MARGIN_MM)) / MM_PER_
 
 TARGET_ORDER = ["n", "s"]
 
-OBJECT_BASELINE_RE = re.compile(r"^(?P<family>(11|26)[ns])_ds3_baseline\.pt$", re.IGNORECASE)
-OBJECT_DISTILL_RE = re.compile(r"^(?P<family>(11|26)[ns])_ds3_from_(?P<src>(11|26)[slmx])\.pt$", re.IGNORECASE)
-POSE_BASELINE_RE = re.compile(r"^(?P<family>(11|26)[ns])_pose_baseline\.pt$", re.IGNORECASE)
-POSE_DISTILL_RE = re.compile(r"^(?P<family>(11|26)[ns])_pose_from_(?P<src>(11|26)[slmx])\.pt$", re.IGNORECASE)
+OBJECT_BASELINE_RE = re.compile(r"^(?P<family>(11|26)[ns])_ds3_baseline\.engine$", re.IGNORECASE)
+OBJECT_DISTILL_RE = re.compile(r"^(?P<family>(11|26)[ns])_ds3_from_(?P<src>(11|26)[slmx])\.engine$", re.IGNORECASE)
+POSE_BASELINE_RE = re.compile(r"^(?P<family>(11|26)[ns])_pose_baseline\.engine$", re.IGNORECASE)
+POSE_DISTILL_RE = re.compile(r"^(?P<family>(11|26)[ns])_pose_from_(?P<src>(11|26)[slmx])\.engine$", re.IGNORECASE)
 
 GROUP_ORDER = [
+    ("11", "object"),
     ("26", "object"),
     ("11", "pose"),
     ("26", "pose"),
@@ -57,11 +58,13 @@ GROUP_ORDER = [
 
 GROUP_LABELS = {
     ("26", "object"): "YOLO26 Obj",
+    ("11", "object"): "YOLO11 Obj",
     ("11", "pose"): "YOLO11 KP",
     ("26", "pose"): "YOLO26 KP",
 }
 
 GROUP_COLORS = {
+    ("11", "object"): "#1f77b4",
     ("26", "object"): "#2ca02c",
     ("11", "pose"): "#ff7f0e",
     ("26", "pose"): "#d62728",
@@ -233,6 +236,7 @@ def build_figure(grouped_rows: dict[str, dict[tuple[str, str], dict[str, dict[st
     )
 
     label_offsets = {
+        ("11", "object"): (8, -12),
         ("26", "object"): (8, -12),
         ("11", "pose"): (8, -12),
         ("26", "pose"): (8, 10),
