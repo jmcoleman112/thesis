@@ -2,7 +2,7 @@
 \section{Results}
 \subsection{Selecting Model Architecture and Dataset}
 
-As discussed earlier, preliminary experiments were first carried out to determine the model family and training dataset to be used for the majority of the study. These experiments compared candidate object detection architectures in terms of analytical performance and latency, and also compared several labelled football broadcast datasets.
+As discussed earlier, preliminary experiments were first carried out to determine the model family and training dataset to be used for the majority of the study. These experiments compared candidate object detection architectures in terms of analytical performance and latency, and also compared several labelled football broadcast datasets. Figure~\ref{fig:arch_compare} compares the analytical performance and latency of a range of object detection model families, while Figure~\ref{fig:dataset_compare} shows the preliminary dataset comparison carried out using the SoccerNet \cite{tracking}, Roboflow \cite{roboflow_sports_repo}, and Football Analytics \cite{roboflow_football_analytics_gnykk_model1} datasets.
 
 \begin{figure}[H]
     \caption{Architecture and dataset comparison.}
@@ -23,9 +23,7 @@ As discussed earlier, preliminary experiments were first carried out to determin
     \end{subfigure}
 \end{figure}
 
-Figure~\ref{fig:arch_compare} compares the analytical performance and latency of a range of object detection model families. Although Faster R-CNN \cite{Zhao2023RTDETR} and SSD achieved slightly higher initial accuracy, the YOLO family \cite{UltralyticsYOLO} provided substantially lower latency on the Jetson Orin Nano Dev Kit. As a result, YOLO-based models were selected for the subsequent object detection experiments, as they offered the most suitable balance between accuracy and real-time edge deployment performance.
-
-Figure~\ref{fig:dataset_compare} shows the preliminary dataset comparison carried out using the SoccerNet \cite{tracking}, Roboflow \cite{roboflow_sports_repo}, and Football Analytics \cite{roboflow_football_analytics_gnykk_model1} datasets. Among these, the Football Analytics dataset achieved the strongest initial $\mathrm{mAP}_{50\text{--}95}$, at approximately 91\%, and was therefore selected for the majority of the object detection study.
+As can be seen from Figure \ref{fig:arch_compare}, although Faster R-CNN \cite{Zhao2023RTDETR} and SSD achieved slightly higher initial accuracy, the YOLO family \cite{UltralyticsYOLO} provided substantially lower latency on the Jetson Orin Nano Dev Kit. As a result, YOLO-based models were selected for the subsequent object detection experiments, as they offered the most suitable balance between accuracy and real-time edge deployment performance. Figure~\ref{fig:dataset_compare} indicates that the Football Analytics dataset achieved the strongest initial $\mathrm{mAP}_{50\text{--}95}$, at approximately 91\%, and was therefore selected for the majority of the object detection study.
 
 
 
@@ -35,51 +33,68 @@ Figure~\ref{fig:dataset_compare} shows the preliminary dataset comparison carrie
 
 With the model family and dataset selected, the full training and compression study was then carried out. In total, 488 unique model artefacts were generated and evaluated across the object detection and pitch keypoint tasks. This included 104 \textbf{YOLO11} models, 152 \textbf{YOLO11-pose} models, 72 \textbf{YOLO26} models, and 160 \textbf{YOLO26-pose} models. The majority of the model inventory consisted of compressed variants rather than baseline models, reflecting the central aim of the study: to examine how different deployment-focused compression strategies affect performance on edge hardware. 
 
-\subsection{Compression Analysis}
+\subsection{Compression Analysis Summary}
+Before individually exploring each compression technique and desired hardware resource reduction, it is useful to first summarise the overall trends across the full model inventory. The following tables and accompanying trade-off plots provide a high-level overview of how each compression technique and combination affected the mAP$_{50\text{--}95}$ versus latency relationship for the object detection and pitch keypoint models. These summaries allow the general patterns to be identified before delving into the more detailed per-technique analyses that follow.
 
-Before individual techniques are examined in detail, it is useful to first take a higher-level view of the overall accuracy--efficiency trade-offs across the main compression strategies to see which approaches are most promising for real-time embedded soccer analysis. This will be broken into Object Detection and Pose Estimation subsections, since the two tasks show different patterns of sensitivity to the various techniques. 
-
-
-Table \ref{tab:object_technique_summary} below displays the average change in mAP50-95 and latency for each of the main compression techniques applied to the YOLO11 and YOLO26 object detection models, averaged across the paired N, S, M, and L variants.
+\subsubsection{Compression Summaries: Object Models}
+Table \ref{tab:object_technique_summary} below displays the average change in mAP50-95 and latency for each of the main optimisation techniques applied to the YOLO11 and YOLO26 object detection models, averaged across the paired N, S, M, L, and X variants.
 
 \input{tables/object_technique_summary}
 
-The object-detection summary shows a clear ordering in the average trade-offs. Hardware acceleration is the safest first optimisation step, reducing latency by roughly one third while preserving almost identical mAP$_{50\text{--}95}$. Quantisation produces the strongest speed-up overall, with the largest gains coming from INT8 deployment, but it also introduces the most visible accuracy penalty among the single-step methods. FP16 is especially notable here, since it captures most of the latency benefit of quantisation while remaining much closer to the baseline in mAP$_{50\text{--}95}$. Pruning sits in the middle ground, offering moderate speed improvements with a smaller average accuracy cost than INT8, while knowledge distillation changes latency very little and is therefore better understood as an accuracy-supporting technique than as a direct runtime optimisation. 
-
-The combination of these various techniques can now be explored, as shown in Table \ref{tab:object_combo_summary}. 
+Hardware acceleration can immediately be seen to be the most effective technique, reducing latency by \textbf{31.0\%} with only a \textbf{-0.3\%} change in mAP$_{50\text{--}95}$. FP16 quantisation also offers a significant latency improvement with little accuracy loss, delivering a \textbf{42.8\%} latency improvement for only a \textbf{-1.6\%} mAP$_{50\text{--}95}$ reduction. INT8 pushes latency lower at a clearer analytical cost. Input reduction then becomes a more incremental trade-off: $960\times960$ px gives a similar latency gain to acceleration, with a larger analytical penalty, while $768\times768$ px and $640\times640$ px produce a much steeper trade-off. In the checkpoint-level \texttt{.pt} comparison, pruning provides only a small average runtime gain until the most aggressive setting, while distillation actually moves latency in the wrong direction on average despite keeping the mAP$_{50\text{--}95}$ loss relatively small. This reinforces the idea that knowledge distillation is more useful as a training intervention than as a direct compression strategy. The combination of these various techniques can now be explored, as shown in Table \ref{tab:object_combo_summary}. 
 
 
 \input{tables/object_combo_summary}
 
-The object-model combinations reinforce the same overall pattern, but make the trade-off boundary more explicit. The most aggressive paths, particularly those ending in INT8 after pruning, achieve the largest average latency reductions, but they do so alongside the largest losses in mAP$_{50\text{--}95}$. By contrast, combinations that retain FP16 precision or pair acceleration with distillation are more balanced, preserving accuracy more effectively while still delivering a substantial runtime improvement. This suggests that for object detection, the strongest deployment candidates are not necessarily the most compressed models, but the intermediate configurations that combine acceleration with moderate compression and some form of accuracy preservation.
+As can be seen in Table \ref{tab:object_combo_summary}, there is essentially no downside to hardware acceleration. By contrast, distillation, pruning, and a combination of the two introducw trade-offs, with increases in latency and reductions in mAP$_{50\text{--}95}$ that become more pronounced as the compression path becomes more aggressive. The most extreme combined paths, which include INT8 quantisation, achieve the largest latency improvements but also the largest mAP$_{50\text{--}95}$ reductions. The FP16-based combined paths occupy a more balanced middle ground, providing substantial latency improvements while preserving much more of the analytical performance than the INT8 routes. Overall, these summary tables indicate that hardware acceleration is a clear first step for improving deployability, while more aggressive compression techniques require careful consideration of the accuracy--latency trade-off. 
 
-\noindent Table \ref{tab:pose_technique_summary} applies the same summary view to the pitch keypoint models, averaging the effect of each base technique across the paired YOLO11-pose and YOLO26-pose N, S, M, and L variants.
+
+With a summary of the object detection compression results, the optimisation of pitch keypoint models can now be examined in the same way.
+\subsubsection{Keypoint Detection Model Compression Summary}
+\noindent Figure \ref{tab:pose_technique_summary} display the same summary view to thepitch keypoint models produced, averaging the effect of each base technique across the paired N, S, M, L, and X variants.
 
 \input{tables/pose_technique_summary}
 
-Compared with object detection, the pose results are much less forgiving. Hardware acceleration again provides a strong and low-risk latency improvement, and quantisation still delivers the largest speed-up, but both effects are now accompanied by a more fragile accuracy profile. The clearest contrast is pruning: whereas the object models tolerated parameter removal reasonably well on average, the pose models lose a very large proportion of mAP$_{50\text{--}95}$ for only modest latency gains. Distillation remains close to latency-neutral here as well, but even its average accuracy cost is still much smaller than the pruning penalty, which makes it a comparatively safer way to support compact pose models.
+Figure \ref{tab:pose_technique_summary} shows that the same techniques that were effective for object detection also produce the strongest latency improvements for keypoint estimation, with hardware acceleration and quantisation again leading the way. However, the mAP$_{50\text{--}95}$ reductions are generally more severe for the pose models than for the object models, especially for input resolution reduction and pruning. This indicates that the keypoint task is more sensitive to aggressive compression. 
 
-\noindent Table \ref{tab:pose_combo_summary} extends this comparison to the combined pose-model compression paths.
+ Table \ref{tab:pose_combo_summary} and its companion trade-off plot extend this comparison to the YOLO26-pose combined compression paths.
 
 \input{tables/pose_combo_summary}
 
-The combined pose results confirm that aggressive multi-step compression is much harder to justify for keypoint localisation than for object detection. INT8-based combined paths and pruning-heavy routes produce large runtime improvements, but the associated mAP$_{50\text{--}95}$ losses are severe enough that many of these models would be difficult to use in a reliable homography pipeline. In contrast, the more balanced combined configurations, particularly those involving acceleration or FP16 alongside distillation and lighter pruning, retain substantially more analytical performance while still improving latency. Taken together, these two pose summary tables indicate that the pitch keypoint task has a much narrower safe compression range than the object task, and that deployment choices for the pose stage must therefore be made more conservatively.
+The main takeaway of Figure \ref{tab:pose_combo_summary} is that INT8 quantisation is severely detrimental to performance. Beyond that
 
-These table-level summaries provide the broad trends across the full model inventory. The following figures then examine each compression technique in more detail, showing how these average effects emerge across model scale and transformation path.
+With a broad analysis of the effect of compression techniques on both object, and pose models, a more in-depth examination of each technique can now be carried out, exploring the effect of model size on compression efficiency.
 
+\subsection{Compression Technique Analysis}
 
+To explore each technique, a ploy of each individual model family is shown, demonstrating the mAP$_{50\text{--}95}$ versus latency trade-off as each technique is applied at various levels of compression aggression. First, hardware acceleration will be explored.
 
 \subsubsection{Hardware Acceleration}
-Figure \ref{fig:hardware_acceleration_results} presents the average mAP50-95 versus latency relationship for the uncompressed and FP32-accelerated YOLO object and pose model families. By averaging the YOLO11 and YOLO26 variants at each model scale, the figure provides a higher-level view of how deployment through TensorRT-based hardware acceleration affects the overall accuracy--latency trade-off. This allows the effect of acceleration to be separated from architectural differences between individual models, making the general performance shift across scale easier to interpret.
+Figure \ref{fig:hardware_acceleration_results} presents the mAP50-95 versus latency relationship for the uncompressed and FP32-accelerated YOLO11 and YOLO26 object and pose model families. Rather than averaging the YOLO11 and YOLO26 variants at each model scale, the figure separates them into four panels so that the effect of TensorRT-based hardware acceleration can be compared directly across both architecture and task type. This makes it easier to see whether the same leftward latency shift is preserved for each family while retaining the scale-wise accuracy ordering within each panel.
 
 \begin{figure}[H]
     \centering
-    \caption{Hardware acceleration trade-off.}
+    \caption{Hardware acceleration trade-off by architecture and task.}
     \label{fig:hardware_acceleration_results}
-    \includegraphics[width=\linewidth]{images/map50_95_vs_latency_baseline_pairs.png}
+    \includegraphics[width=\linewidth]{../Figures/produced_images/map50_95_vs_latency_baseline_pairs.png}
 \end{figure}
 
 The results show that hardware acceleration provides a substantial reduction in latency across all model scales while preserving almost identical mAP50-95 performance. In each family-task group, the FP32-accelerated points move consistently leftward relative to their uncompressed counterparts, indicating faster inference with negligible accuracy loss. This suggests that deployment optimisation alone provides a strong baseline improvement before more aggressive compression techniques are considered. It is also notable that the relative ordering of the models is preserved after acceleration, meaning that larger models remain more accurate but slower, while smaller models remain faster but less accurate. Overall, hardware acceleration improves deployability without materially altering the underlying accuracy hierarchy.
+
+
+\subsubsection{Input Resolution Reduction}
+
+
+Figure \ref{fig:input_resolution_reduction_results} shows the effect of reducing the input resolution on the mAP50-95 versus latency trade-off for the YOLO11 and YOLO26 object and pose models. Each line traces the progression of a family-task group through increasingly aggressive input resolution reduction, allowing the effect of this technique to be examined in a structured way across both model scale and task type.
+\begin{figure}[H]
+    \centering
+    \caption{Input resolution reduction trade-off.}
+    \label{fig:input_resolution_reduction_results}
+    \includegraphics[width=\linewidth]{../Figures/produced_images/map50_95_vs_latency_input_resolution_panels.png}
+\end{figure}
+
+As shown in Figure \ref{fig:input_resolution_reduction_results}, reducing the input resolution produces a significant reduction in latency for all four model families. The object detection models preserve relatively high mAP50-95 values alongside this latency reduction. By contrast, the pose models, and especially the YOLO26 pose variants, experience substantially larger degradations in accuracy as resolution decreases. This indicates that input resolution reduction is considerably more tolerable for object detection than for keypoint estimation,. 
+
 
 \subsubsection{Quantisation}
 Figure \ref{fig:quantisation_results} shows the average mAP50-95 versus latency trade-off for baseline, FP32, and INT8 deployment stages across the YOLO11 and YOLO26 object and pose families. Each line traces the progression of a family-task group through increasingly aggressive deployment optimisation, allowing the effect of quantisation on both inference speed and accuracy retention to be examined in a structured way. This makes it possible to compare whether object and pose models respond similarly to reduced numerical precision.
@@ -117,20 +132,8 @@ Figure \ref{fig:knowledge_distillation_results} presents the effect of knowledge
 \end{figure}
 
 
-The results show that distillation produces modest but consistent accuracy improvements while leaving latency almost unchanged. For the object student, the distilled variants cluster very closely in latency yet slightly outperform the baseline in mAP50-95, indicating that the student benefits from teacher guidance without incurring a meaningful runtime cost. A similar pattern is visible for the keypoint student, where the distilled models remain close to the baseline latency while achieving comparable or slightly improved accuracy. The gains are not dramatic, but they are important because they move the student upward rather than forcing the usual downward shift associated with compression. Overall, the figure suggests that knowledge distillation is an accuracy-preserving compression support technique rather than a direct latency-reduction method, and is most valuable when used to strengthen smaller deployable models.
+Using baseline \texttt{.engine} models and distilled \texttt{.engine} students, the distillation results remain mixed rather than uniformly beneficial. Several YOLO11 students still move rightward relative to their baselines, indicating slower inference, while some YOLO26 students shift slightly leftward and recover a modest runtime gain. Accuracy is also pair-dependent rather than consistently improved: some student--teacher pairings gain mAP$_{50\text{--}95}$, but others lose it, especially for the larger teacher jumps. The figure therefore suggests that distillation should be treated primarily as a training intervention whose value depends strongly on the chosen teacher--student pairing, rather than as a reliable standalone compression method.
 
-\subsubsection{Combinations of Different Techniques}
-Figure \ref{fig:combination_results} brings the different compression strategies together by tracing the mAP50-95 versus latency paths of YOLO11s object models under acceleration, pruning, quantisation, distillation, and their combined variants. Rather than treating each technique in isolation, the figure shows how successive optimisation steps reshape the overall accuracy--latency frontier. This provides a compact way to compare which sequences of transformations produce the most favourable deployment trade-offs.
-
-\begin{figure}[H]
-    \centering
-    \caption{Combined compression trade-off.}
-    \label{fig:combination_results}
-    \includegraphics[width=\linewidth]{images/map50_95_vs_latency_combinations_11s_object_paths.png}
-\end{figure}
-
-
-The combined results show that no single path dominates in all respects, and that the best choice depends on whether latency reduction or accuracy retention is prioritised. Acceleration alone provides a strong first improvement, while quantisation gives the largest latency reduction but also the largest drop in mAP50-95. Pruning tends to occupy the middle ground, offering useful speed gains with smaller accuracy loss than quantisation. Distillation-based paths are especially notable because they help preserve or recover accuracy, making the combined distilled-pruned or distilled-accelerated variants more balanced overall. The figure therefore reinforces the broader pattern seen throughout this section: the most effective deployment candidates are usually not the most aggressively compressed models, but the intermediate configurations that balance accuracy preservation with meaningful runtime improvement.
 
 \subsection{Hardware Analysis}
 

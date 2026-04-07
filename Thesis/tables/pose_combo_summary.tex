@@ -1,37 +1,41 @@
 \setcellcolorrange{0}{60}{70}
 \begin{table}[H]
+\footnotesize
 \centering
-\caption{Pose combined compression summary.}
+\caption{Pose combined compression summary .}
 \label{tab:pose_combo_summary}
-\small
 \definecolor{rulegray}{gray}{0.88}
-\setlength{\tabcolsep}{5pt}
+\begin{minipage}{0.31\linewidth}
+\centering
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{l c c}
 \toprule
-\textbf{Combination} & \textbf{$\Delta$ mAP$_{50\text{--}95}$} & \textbf{Lat. $\downarrow$} \\
+\textbf{Combination} & \textbf{$\Delta$mAP} & \textbf{Lat. $\downarrow$} \\
 \midrule
-\textbf{Distilled} & \autocolorcell{-12.6}{-12.6\%} & \autocolorcell{39.7}{39.7\%} \\
-\hspace{1em}Distilled + Accelerated & \autocolorcell{-4.8}{-4.8\%} & \autocolorcell{24.3}{24.3\%} \\
-\hspace{1em}Distilled + FP16 & \autocolorcell{-4.7}{-4.7\%} & \autocolorcell{44.9}{44.9\%} \\
-\hspace{1em}Distilled + INT8 & \autocolorcell{-28.2}{-28.2\%} & \autocolorcell{49.9}{49.9\%} \\
+\multicolumn{3}{l}{\textbf{Distilled And}} \\
+\hspace{1em}Accelerated & \autocolorcell{-4.8}{-4.8\%} & \autocolorcell{0.3}{0.3\%} \\
+\hspace{1em}FP16 & \autocolorcell{-4.6}{-4.6\%} & \autocolorcell{51.2}{51.2\%} \\
+\hspace{1em}INT8 & \autocolorcell{-58.9}{-58.9\%} & \autocolorcell{63.9}{63.9\%} \\
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
 
-\textbf{Pruned} & \autocolorcell{-30.8}{-30.8\%} & \autocolorcell{50.5}{50.5\%} \\
-\hspace{1em}Pruned + Accelerated & \autocolorcell{-24.5}{-24.5\%} & \autocolorcell{39.1}{39.1\%} \\
-\hspace{1em}Pruned + FP16 & \autocolorcell{-24.5}{-24.5\%} & \autocolorcell{54.4}{54.4\%} \\
-\hspace{1em}Pruned + INT8 & \autocolorcell{-43.3}{-43.3\%} & \autocolorcell{58.1}{58.1\%} \\
+\multicolumn{3}{l}{\textbf{Pruned And}} \\
+\hspace{1em}Accelerated & \autocolorcell{-6.2}{-6.2\%} & \autocolorcell{9.0}{9.0\%} \\
+\hspace{1em}FP16 & \autocolorcell{-6.2}{-6.2\%} & \autocolorcell{52.2}{52.2\%} \\
+\hspace{1em}INT8 & \autocolorcell{-11.8}{-11.8\%} & \autocolorcell{59.2}{59.2\%} \\
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
 
-\textbf{Distilled + Pruned} & \autocolorcell{-9.7}{-9.7\%} & \autocolorcell{33.6}{33.6\%} \\
-\hspace{1em}Distilled + Pruned & \autocolorcell{-3.4}{-3.4\%} & \autocolorcell{11.3}{11.3\%} \\
-\hspace{1em}Distilled + Pruned + Accel. & \autocolorcell{-3.6}{-3.6\%} & \autocolorcell{33.0}{33.0\%} \\
-\hspace{1em}Distilled + Pruned + FP16 & \autocolorcell{-3.7}{-3.7\%} & \autocolorcell{43.5}{43.5\%} \\
-\hspace{1em}Distilled + Pruned + INT8 & \autocolorcell{-28.2}{-28.2\%} & \autocolorcell{46.7}{46.7\%} \\
+\multicolumn{3}{l}{\textbf{Distill+Prune And}} \\
+\hspace{1em}Accelerated & \autocolorcell{-0.1}{-0.1\%} & \autocolorcell{11.1}{11.1\%} \\
+\hspace{1em}FP16 & \autocolorcell{-0.3}{-0.3\%} & \autocolorcell{56.4}{56.4\%} \\
+\hspace{1em}INT8 & \autocolorcell{-60.1}{-60.1\%} & \autocolorcell{66.0}{66.0\%} \\
 \bottomrule
 \end{tabular}
-\par
-\vspace{3pt}
-\noindent\parbox{\columnwidth}{\footnotesize \textit{Note:} Rows ending with ``Accelerated'' or ``Accel.'' refer to TensorRT engine deployment without FP16 or INT8 quantisation. FP16 and INT8 rows are also accelerated deployments, but include reduced-precision quantisation as an additional step.}
+\end{minipage}
+\hfill
+\begin{minipage}{0.64\linewidth}
+\centering
+\includegraphics[width=\linewidth]{../Figures/produced_images/pose_combo_summary_tradeoff.png}
+\end{minipage}
 \end{table}

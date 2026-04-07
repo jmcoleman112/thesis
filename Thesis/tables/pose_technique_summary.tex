@@ -1,40 +1,55 @@
 \setcellcolorrange{0}{60}{70}
 \begin{table}[H]
 \centering
-\caption{Pose base compression summary.}
-\small
+\caption{Pose base optimisation summary.}
 \label{tab:pose_technique_summary}
+\footnotesize
 \definecolor{rulegray}{gray}{0.88}
-\setlength{\tabcolsep}{5pt}
+\begin{minipage}{0.35\linewidth}
+\centering
+\setlength{\tabcolsep}{4pt}
 \begin{tabular}{l c c}
 \toprule
-\textbf{Technique} & \textbf{$\Delta$ mAP$_{50\text{--}95}$} & \textbf{Lat. $\downarrow$} \\
+\textbf{Technique} & \textbf{$\Delta$mAP} & \textbf{Lat.$\downarrow$} \\
 \midrule
-\textbf{Hardware acceleration} & \autocolorcell{-0.2}{-0.2\%} & \autocolorcell{29.9}{29.9\%} \\
+\textbf{Acceleration} & \autocolorcell{-0.1}{-0.1\%} & \autocolorcell{37.2}{37.2\%} \\
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
 
-\textbf{Quantisation} & \autocolorcell{-6.5}{-6.5\%} & \autocolorcell{59.6}{59.6\%} \\
-\hspace{1em}FP16 & \autocolorcell{-1.3}{-1.3\%} & \autocolorcell{56.0}{56.0\%} \\
-\hspace{1em}INT8 & \autocolorcell{-11.8}{-11.8\%} & \autocolorcell{63.2}{63.2\%} \\
+\multicolumn{3}{l}{\textbf{Input Scaling and Accel.}} \\
+\hspace{1em}960 & \autocolorcell{-32.9}{-32.9\%} & \autocolorcell{33.5}{33.5\%} \\
+\hspace{1em}768 & \autocolorcell{-46.0}{-46.0\%} & \autocolorcell{55.5}{55.5\%} \\
+\hspace{1em}640 & \autocolorcell{-55.1}{-55.1\%} & \autocolorcell{69.8}{69.8\%} \\
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
 
-\textbf{Pruning} & \autocolorcell{-24.6}{-24.6\%} & \autocolorcell{16.3}{16.3\%} \\
-\hspace{1em}90\% pruning & \autocolorcell{-23.7}{-23.7\%} & \autocolorcell{15.2}{15.2\%} \\
-\hspace{1em}80\% pruning & \autocolorcell{-24.5}{-24.5\%} & \autocolorcell{16.9}{16.9\%} \\
-\hspace{1em}70\% pruning & \autocolorcell{-26.3}{-26.3\%} & \autocolorcell{17.3}{17.3\%} \\
+\multicolumn{3}{l}{\textbf{Quantisation}} \\
+\hspace{1em}FP16 & \autocolorcell{-0.0}{-0.0\%} & \autocolorcell{51.0}{51.0\%} \\
+\hspace{1em}INT8 & \autocolorcell{-32.5}{-32.5\%} & \autocolorcell{63.9}{63.9\%} \\
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
 
-\textbf{Distillation} & \autocolorcell{-4.7}{-4.7\%} & \autocolorcell{0.6}{0.6\%} \\
-\hspace{1em}Small jump & \autocolorcell{-4.8}{-4.8\%} & \autocolorcell{0.2}{0.2\%} \\
-\hspace{1em}Medium jump & \autocolorcell{-6.3}{-6.3\%} & \autocolorcell{0.6}{0.6\%} \\
-\hspace{1em}Large jump & \autocolorcell{-3.0}{-3.0\%} & \autocolorcell{1.2}{1.2\%} \\
+\multicolumn{3}{l}{\textbf{Pruning}} \\
+\hspace{1em}90\% pruning & \autocolorcell{-5.2}{-5.2\%} & \autocolorcell{8.7}{8.7\%} \\
+\hspace{1em}80\% pruning & \autocolorcell{-0.1}{-0.1\%} & \autocolorcell{9.3}{9.3\%} \\
+\hspace{1em}70\% pruning & \autocolorcell{-2.4}{-2.4\%} & \autocolorcell{9.0}{9.0\%} \\
+
+\arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
+
+\multicolumn{3}{l}{\textbf{Distillation}} \\
+\hspace{1em}Small jump & \autocolorcell{-4.0}{-4.0\%} & \autocolorcell{0.9}{0.9\%} \\
+\hspace{1em}Medium jump & \autocolorcell{-5.8}{-5.8\%} & \autocolorcell{2.3}{2.3\%} \\
+\hspace{1em}Large jump & \autocolorcell{-3.0}{-3.0\%} & \autocolorcell{3.3}{3.3\%} \\
 \bottomrule
-\end{tabular}%
+\end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}{0.64\linewidth}
+\centering
+\includegraphics[width=\linewidth]{../Figures/produced_images/pose_technique_summary_tradeoff.png}
+\end{minipage}
 
 \par
 \vspace{3pt}
-\noindent\parbox{\columnwidth}{\footnotesize \textit{Note:} Distillation jump size is grouped by teacher-size gap: small = next size up, medium = two sizes up, and large = three or more sizes up.}
+\noindent\parbox{\linewidth}{\footnotesize \textit{Note:} Distill jump sizes are defined by the gap to the teacher: small = 1 size up, medium = 2 sizes up, and large = 3 or more sizes up.}
 \end{table}

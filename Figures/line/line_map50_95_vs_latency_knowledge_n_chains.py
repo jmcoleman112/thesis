@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Horizontal comparison of knowledge-distillation chains for n- and s-model students using .pt rows.
+Horizontal comparison of knowledge-distillation chains for n- and s-model students using .engine rows.
 
 The figure shows two side-by-side plots:
 
@@ -91,7 +91,7 @@ STAGE_STYLES = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Plot mAP50-95 vs latency for 11/26 n- and s-student distillation .pt chains with baselines."
+        description="Plot mAP50-95 vs latency for 11/26 n- and s-student distillation .engine chains with baselines."
     )
     parser.add_argument("--csv", type=Path, default=CSV_PATH, help="Path to the model summary CSV.")
     parser.add_argument("--output", type=Path, help="Optional PNG output path.")
@@ -179,7 +179,7 @@ def load_plot_rows(csv_path: Path) -> list[dict[str, object]]:
             usable.append({**row, **parsed, MAP_COLUMN: map_value, LATENCY_COLUMN: latency_value})
 
     if not usable:
-        raise ValueError("No matching distillation .pt rows contain numeric mAP50-95 and latency values.")
+        raise ValueError("No matching distillation .engine rows contain numeric mAP50-95 and latency values.")
 
     return usable
 

@@ -2,13 +2,15 @@
 """
 Line plot of mAP50-95 vs latency for baseline to fp32 pairs by size.
 
-The figure shows two side-by-side plots:
+The figure shows four panels:
 
-- Object models
-- Pose models
+- YOLO11 object
+- YOLO26 object
+- YOLO11 pose
+- YOLO26 pose
 
-Within each plot, the X/L/M/S/N lines average the corresponding 11- and 26-series
-baseline rows for that size and artifact.
+Within each panel, the N/S/M/L/X lines connect the matching uncompressed `.pt`
+row to its FP32 TensorRT `.engine` counterpart for that series, task, and size.
 
 Run:
   python Figures/line/line_map50_95_vs_latency_baseline_pairs.py
@@ -31,25 +33,32 @@ MAP_COLUMN = "mAP50-95"
 LATENCY_COLUMN = "Latency ms"
 REQUIRED_COLUMNS = ["Model", "Location", MAP_COLUMN, LATENCY_COLUMN]
 CSV_PATH = Path(__file__).resolve().parents[2] / "research" / "model_summaries.csv"
-MM_PER_INCH = 25.4
-A4_LANDSCAPE_WIDTH_MM = 297.0
-A4_LANDSCAPE_HEIGHT_MM = 210.0
-HORIZONTAL_MARGIN_MM = 24.0
-VERTICAL_MARGIN_MM = 24.0
-FIGURE_WIDTH_IN = (A4_LANDSCAPE_WIDTH_MM - (2 * HORIZONTAL_MARGIN_MM)) / MM_PER_INCH
-FIGURE_HEIGHT_IN = (A4_LANDSCAPE_HEIGHT_MM - (2 * VERTICAL_MARGIN_MM)) / MM_PER_INCH
+FIGURE_WIDTH_IN = 7.1
+FIGURE_HEIGHT_IN = 5.9
+TITLE_FONT_SIZE = 15
+LABEL_FONT_SIZE = 15
+TICK_FONT_SIZE = 12.5
+LEGEND_FONT_SIZE = 12
+ANNOTATION_FONT_SIZE = 13.5
 
-SIZE_ORDER = ["x", "l", "m", "s", "n"]
-DOMAIN_ORDER = ["object", "pose"]
+SIZE_ORDER = ["n", "s", "m", "l", "x"]
+PANEL_ORDER = [
+    ("11", "object"),
+    ("26", "object"),
+    ("11", "pose"),
+    ("26", "pose"),
+]
 
 OBJECT_BASELINE_PT_RE = re.compile(r"^(?P<family>(11|26)[nsmlx])_ds3_baseline\.pt$", re.IGNORECASE)
 OBJECT_BASELINE_ENGINE_RE = re.compile(r"^(?P<family>(11|26)[nsmlx])_ds3_baseline\.engine$", re.IGNORECASE)
 POSE_BASELINE_PT_RE = re.compile(r"^(?P<family>(11|26)[nsmlx])_pose_baseline\.pt$", re.IGNORECASE)
 POSE_BASELINE_ENGINE_RE = re.compile(r"^(?P<family>(11|26)[nsmlx])_pose_baseline\.engine$", re.IGNORECASE)
 
-DOMAIN_TITLES = {
-    "object": "Object Baseline vs FP32",
-    "pose": "Pose Baseline vs FP32",
+PANEL_TITLES = {
+    ("11", "object"): "YOLO11 Object",
+    ("26", "object"): "YOLO26 Object",
+    ("11", "pose"): "YOLO11 Pose",
+    ("26", "pose"): "YOLO26 Pose",
 }
 
 SIZE_LABELS = {
@@ -61,11 +70,11 @@ SIZE_LABELS = {
 }
 
 SIZE_COLORS = {
-    "x": "#9467bd",
-    "l": "#d62728",
-    "m": "#2ca02c",
-    "s": "#ff7f0e",
     "n": "#1f77b4",
+    "s": "#ff7f0e",
+    "m": "#2ca02c",
+    "l": "#d62728",
+    "x": "#9467bd",
 }
 
 STAGE_ORDER = ["pt", "fp32"]
@@ -81,10 +90,18 @@ STAGE_STYLES = {
     },
 }
 
+SIZE_ANNOTATIONS = {
+    "n": {"xytext": (0, -10), "ha": "center", "va": "top"},
+    "s": {"xytext": (6, 5), "ha": "left", "va": "bottom"},
+    "m": {"xytext": (-6, -1), "ha": "right", "va": "center"},
+    "l": {"xytext": (6, -1), "ha": "left", "va": "center"},
+    "x": {"xytext": (-6, 5), "ha": "right", "va": "bottom"},
+}
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Plot mAP50-95 vs latency for baseline .pt to fp32 model pairs by size."
+        description="Plot mAP50-95 vs latency for baseline .pt to fp32 model pairs by series, task, and size."
     )
     parser.add_argument(
         "--csv",
@@ -195,65 +212,72 @@ def load_plot_rows(csv_path: Path) -> list[dict[str, object]]:
     return usable
 
 
-def build_domain_size_rows(
+def build_panel_rows(
     rows: list[dict[str, object]]
-) -> dict[str, dict[str, dict[str, list[dict[str, object]]]]]:
-    grouped: dict[str, dict[str, dict[str, list[dict[str, object]]]]] = {
-        domain: {size: {artifact: [] for artifact in STAGE_ORDER} for size in SIZE_ORDER} for domain in DOMAIN_ORDER
+) -> dict[tuple[str, str], dict[str, dict[str, list[dict[str, object]]]]]:
+    grouped: dict[tuple[str, str], dict[str, dict[str, list[dict[str, object]]]]] = {
+        panel: {size: {artifact: [] for artifact in STAGE_ORDER} for size in SIZE_ORDER}
+        for panel in PANEL_ORDER
     }
 
     for row in rows:
-        domain = str(row["domain"])
+        panel = (str(row["series"]), str(row["domain"]))
         size = str(row["size"])
         artifact = str(row["artifact"])
-        if domain in grouped and size in grouped[domain] and artifact in grouped[domain][size]:
-            grouped[domain][size][artifact].append(row)
+        if panel in grouped and size in grouped[panel] and artifact in grouped[panel][size]:
+            grouped[panel][size][artifact].append(row)
 
     missing: list[str] = []
-    for domain in DOMAIN_ORDER:
+    for series, domain in PANEL_ORDER:
+        panel = (series, domain)
         for size in SIZE_ORDER:
             for artifact in STAGE_ORDER:
-                if not grouped[domain][size][artifact]:
-                    missing.append(f"{domain} {SIZE_LABELS[size]} ({artifact})")
+                if not grouped[panel][size][artifact]:
+                    missing.append(f"{PANEL_TITLES[panel]} {SIZE_LABELS[size]} ({artifact})")
 
     if missing:
-        raise ValueError("Missing one or more required size/domain baseline groups: " + ", ".join(missing))
+        raise ValueError("Missing one or more required baseline groups: " + ", ".join(missing))
 
     return grouped
 
 
-def build_domain_size_averages(
-    grouped_rows: dict[str, dict[str, dict[str, list[dict[str, object]]]]]
-) -> dict[str, dict[str, dict[str, tuple[float, float]]]]:
-    averages: dict[str, dict[str, dict[str, tuple[float, float]]]] = {}
+def build_panel_size_values(
+    grouped_rows: dict[tuple[str, str], dict[str, dict[str, list[dict[str, object]]]]]
+) -> dict[tuple[str, str], dict[str, dict[str, tuple[float, float]]]]:
+    values: dict[tuple[str, str], dict[str, dict[str, tuple[float, float]]]] = {}
 
-    for domain, size_rows in grouped_rows.items():
-        averages[domain] = {}
+    for panel, size_rows in grouped_rows.items():
+        values[panel] = {}
         for size, artifact_rows in size_rows.items():
-            averages[domain][size] = {}
+            values[panel][size] = {}
             for artifact in STAGE_ORDER:
                 latencies = [float(row[LATENCY_COLUMN]) for row in artifact_rows[artifact]]
                 map_values = [float(row[MAP_COLUMN]) for row in artifact_rows[artifact]]
-                averages[domain][size][artifact] = (
+                values[panel][size][artifact] = (
                     sum(latencies) / len(latencies),
                     sum(map_values) / len(map_values),
                 )
 
-    return averages
+    return values
 
 
-def print_group_summary(grouped_rows: dict[str, dict[str, dict[str, list[dict[str, object]]]]]) -> None:
-    for domain in DOMAIN_ORDER:
+def print_group_summary(
+    grouped_rows: dict[tuple[str, str], dict[str, dict[str, list[dict[str, object]]]]]
+) -> None:
+    for panel in PANEL_ORDER:
         size_summaries = []
         for size in SIZE_ORDER:
-            counts = ", ".join(f"{artifact}={len(grouped_rows[domain][size][artifact])}" for artifact in STAGE_ORDER)
+            counts = ", ".join(
+                f"{artifact}={len(grouped_rows[panel][size][artifact])}" for artifact in STAGE_ORDER
+            )
             size_summaries.append(f"{SIZE_LABELS[size]}({counts})")
-        print(f"- {DOMAIN_TITLES[domain]}: {'; '.join(size_summaries)}")
+        print(f"- {PANEL_TITLES[panel]}: {'; '.join(size_summaries)}")
 
 
-def build_figure(domain_size_averages: dict[str, dict[str, dict[str, tuple[float, float]]]]):
+def build_figure(panel_size_values: dict[tuple[str, str], dict[str, dict[str, tuple[float, float]]]]):
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
+    from matplotlib.ticker import FormatStrFormatter
 
     plt.rcParams.update(
         {
@@ -265,79 +289,62 @@ def build_figure(domain_size_averages: dict[str, dict[str, dict[str, tuple[float
         }
     )
 
-    fig, axes = plt.subplots(1, 2, figsize=(FIGURE_WIDTH_IN, FIGURE_HEIGHT_IN * 0.50), sharey=False)
+    fig, axes = plt.subplots(2, 2, figsize=(FIGURE_WIDTH_IN, FIGURE_HEIGHT_IN), sharey="row")
+    axes_map = {panel: axes.flat[index] for index, panel in enumerate(PANEL_ORDER)}
 
-    for index, domain in enumerate(DOMAIN_ORDER):
-        ax = axes[index]
+    for panel in PANEL_ORDER:
+        ax = axes_map[panel]
 
         for size in SIZE_ORDER:
             size_color = SIZE_COLORS[size]
-            latencies = [domain_size_averages[domain][size][artifact][0] for artifact in STAGE_ORDER]
-            map_values = [domain_size_averages[domain][size][artifact][1] for artifact in STAGE_ORDER]
+            latencies = [panel_size_values[panel][size][artifact][0] for artifact in STAGE_ORDER]
+            map_values = [panel_size_values[panel][size][artifact][1] for artifact in STAGE_ORDER]
 
             ax.plot(
                 latencies,
                 map_values,
                 color=size_color,
-                linewidth=1.1,
+                linewidth=1.7,
                 zorder=1,
             )
 
             for artifact in STAGE_ORDER:
-                stage_latency, stage_map = domain_size_averages[domain][size][artifact]
+                stage_latency, stage_map = panel_size_values[panel][size][artifact]
                 ax.scatter(
                     stage_latency,
                     stage_map,
                     color=size_color,
                     marker=STAGE_STYLES[artifact]["marker"],
-                    s=72,
+                    s=115,
                     edgecolors="black",
                     linewidths=0.8,
                     zorder=3,
                 )
 
-                annotate_point = artifact == "pt"
-                x_offset = -7
-                y_offset = 6
-                horizontal_alignment = "right"
-                vertical_alignment = "bottom"
+            annotation_style = SIZE_ANNOTATIONS[size]
+            pt_latency, pt_map = panel_size_values[panel][size]["pt"]
+            ax.annotate(
+                SIZE_LABELS[size],
+                xy=(pt_latency, pt_map),
+                xytext=annotation_style["xytext"],
+                textcoords="offset points",
+                ha=annotation_style["ha"],
+                va=annotation_style["va"],
+                fontsize=ANNOTATION_FONT_SIZE,
+                color=size_color,
+                weight="bold",
+                zorder=4,
+            )
 
-                if domain == "object" and size == "l" and artifact == "pt":
-                    x_offset = 7
-                    y_offset = 0
-                    horizontal_alignment = "left"
-                    vertical_alignment = "center"
-                elif domain == "object" and size == "m":
-                    annotate_point = artifact == "fp32"
-                    x_offset = -7
-                    y_offset = 0
-                    horizontal_alignment = "right"
-                    vertical_alignment = "center"
-                elif domain == "pose" and size in {"s", "l"} and artifact == "pt":
-                    x_offset = 0
-                    y_offset = -8
-                    horizontal_alignment = "center"
-                    vertical_alignment = "top"
-
-                if annotate_point:
-                    ax.annotate(
-                        SIZE_LABELS[size],
-                        xy=(stage_latency, stage_map),
-                        xytext=(x_offset, y_offset),
-                        textcoords="offset points",
-                        ha=horizontal_alignment,
-                        va=vertical_alignment,
-                        fontsize=9,
-                        color=size_color,
-                        weight="bold",
-                        zorder=4,
-                    )
-
-        ax.set_title(DOMAIN_TITLES[domain], fontsize=10.5)
+        ax.set_title(PANEL_TITLES[panel], fontsize=TITLE_FONT_SIZE, pad=8)
         ax.grid(True, color="#d9d9d9", linestyle="--", linewidth=0.7, alpha=0.8)
-        ax.tick_params(labelsize=9)
-        ax.set_xlabel("Latency ms", fontsize=11)
-        ax.set_ylabel(MAP_COLUMN, fontsize=11)
+        ax.tick_params(labelsize=TICK_FONT_SIZE, width=1.0, length=5)
+        ax.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
+
+    axes[0][0].set_ylabel(MAP_COLUMN, fontsize=LABEL_FONT_SIZE)
+    axes[1][0].set_ylabel(MAP_COLUMN, fontsize=LABEL_FONT_SIZE)
+    axes[1][0].set_xlabel("Latency ms", fontsize=LABEL_FONT_SIZE)
+    axes[1][1].set_xlabel("Latency ms", fontsize=LABEL_FONT_SIZE)
 
     stage_handles = [
         Line2D(
@@ -352,25 +359,40 @@ def build_figure(domain_size_averages: dict[str, dict[str, dict[str, tuple[float
         for artifact in STAGE_ORDER
     ]
 
+    size_handles = [
+        Line2D(
+            [0],
+            [0],
+            color=SIZE_COLORS[size],
+            linewidth=1.6,
+            label=SIZE_LABELS[size],
+        )
+        for size in SIZE_ORDER
+    ]
+
+    combined_handles = size_handles + stage_handles
+
     fig.legend(
-        handles=stage_handles,
+        handles=combined_handles,
         loc="upper center",
         bbox_to_anchor=(0.5, 0.995),
-        ncol=2,
+        ncol=4,
         frameon=False,
-        fontsize=8.5,
-        handletextpad=0.6,
-        columnspacing=0.9,
+        fontsize=LEGEND_FONT_SIZE,
+        handletextpad=0.55,
+        columnspacing=1.1,
+        labelspacing=0.8,
+        borderaxespad=0.2,
     )
 
-    fig.tight_layout(rect=[0, 0, 1, 0.92])
+    fig.tight_layout(rect=[0, 0, 1, 0.89], w_pad=1.1, h_pad=1.6)
     return fig
 
 
 def save_figure(fig, output_path: Path) -> Path:
     output_path = output_path.resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=200, bbox_inches="tight")
+    fig.savefig(output_path, dpi=300, bbox_inches="tight")
     return output_path
 
 
@@ -391,8 +413,8 @@ def main() -> int:
 
     try:
         rows = load_plot_rows(args.csv)
-        grouped_rows = build_domain_size_rows(rows)
-        domain_size_averages = build_domain_size_averages(grouped_rows)
+        grouped_rows = build_panel_rows(rows)
+        panel_size_values = build_panel_size_values(grouped_rows)
     except Exception as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
@@ -408,7 +430,7 @@ def main() -> int:
         )
         return 1
 
-    fig = build_figure(domain_size_averages)
+    fig = build_figure(panel_size_values)
 
     saved_path: Optional[Path] = None
     try:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Single-plot comparison of averaged distillation jump stages using engine rows.
+Single-plot comparison of averaged distillation jump stages using .engine rows.
 
 The figure averages the available n/s/m/l/x models within each group and overlays:
 
@@ -83,7 +83,7 @@ STAGE_STYLES = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Plot averaged mAP50-95 vs latency for baseline and distillation jump engine stages."
+        description="Plot averaged mAP50-95 vs latency for baseline and distillation jump .engine stages."
     )
     parser.add_argument("--csv", type=Path, default=CSV_PATH, help="Path to the model summary CSV.")
     parser.add_argument("--output", type=Path, help="Optional PNG output path.")
