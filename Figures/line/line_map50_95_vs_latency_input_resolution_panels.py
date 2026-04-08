@@ -9,12 +9,12 @@ The figure contains four panels:
 - 26 pose
 
 Each panel shows five family lines (N/S/M/L/X), connecting:
-baseline -> 960 -> 768 -> 640
+baseline -> 75% -> 60% -> 50%
 
 Artifact selection:
 - By default, all stages prefer `.engine` rows.
 - Use `--baseline-artifact pt` to compare a `.pt` baseline against
-  `.engine` 960/768/640 rows when both are available.
+  `.engine` 75%/60%/50% rows when both are available.
 
 Run:
   python Figures/line/line_map50_95_vs_latency_input_resolution_panels.py
@@ -81,9 +81,9 @@ STAGE_MARKERS = {
 
 STAGE_LABELS = {
     "baseline": "Uncompressed",
-    "960": "960",
-    "768": "768",
-    "640": "640",
+    "960": "75%",
+    "768": "60%",
+    "640": "50%",
 }
 
 OBJECT_RE = re.compile(

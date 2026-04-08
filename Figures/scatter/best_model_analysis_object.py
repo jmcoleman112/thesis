@@ -20,7 +20,7 @@ from figure_save_dialog import prompt_save_figure
 REQUIRED_COLS = ["Model", "Location", "Latency ms"]
 MAP_COLUMN = "mAP50-95"
 MIN_MAP = 0.70
-MAX_LATENCY_MS = 40  # e.g. 40.0
+MAX_LATENCY_MS = 60  # e.g. 40.0
 CSV_PATH = Path(__file__).resolve().parents[2] / "research" / "model_summaries.csv"
 FILTER_TOKEN = "/object/"
 IEEE_ONE_COL_WIDTH_IN = 3.5

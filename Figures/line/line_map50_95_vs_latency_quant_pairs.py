@@ -96,11 +96,11 @@ STAGE_ORDER = ["pt", "fp32", "int8"]
 
 STAGE_STYLES = {
     "pt": {
-        "label": "Uncompressed",
+        "label": "FP32 .pt",
         "marker": "o",
     },
     "fp32": {
-        "label": "Accel.",
+        "label": "FP16",
         "marker": "s",
     },
     "int8": {
