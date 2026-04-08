@@ -30,12 +30,22 @@ CSV_PATH = Path(__file__).resolve().parents[2] / "research" / "model_summaries.c
 DEFAULT_OUTPUT = (
     Path(__file__).resolve().parents[2] / "Figures" / "produced_images" / "pose_technique_summary_tradeoff.png"
 )
-MAP_COLUMN = "mAP50-95"
+DEFAULT_MAP_COLUMN = "mAP50-95"
+VALIDATION2_MAP_COLUMN = "Validation2 mAP50-95"
+MAP_COLUMN = DEFAULT_MAP_COLUMN
 LATENCY_COLUMN = "Latency ms"
 REQUIRED_COLUMNS = ["Model", "Location", MAP_COLUMN, LATENCY_COLUMN]
 DISTILL_TOKENS = ("distill", "distillation", "student", "teacher", "kd")
 SIZE_ORDER = ["n", "s", "m", "l", "x"]
 SIZE_INDEX = {size: index for index, size in enumerate(SIZE_ORDER)}
+INPUT_SEGMENTS = (
+    "/input_reduction/",
+    "/quantization_input/",
+    "/pruning_input/",
+    "/pruning_quantization_input/",
+    "/distilled_input/",
+    "/distilled_quantized_input/",
+)
 
 GROUP_COLORS = {
     "Baseline": "#111111",
@@ -92,6 +102,11 @@ def parse_args() -> argparse.Namespace:
         choices=["11", "26", "all"],
         default="all",
         help="Optionally restrict the plot to one model series.",
+    )
+    parser.add_argument(
+        "--validation2",
+        action="store_true",
+        help="Use Validation2 mAP50-95 instead of the default mAP50-95 column.",
     )
     parser.add_argument("--no-show", action="store_true", help="Build the figure without opening a plot window.")
     return parser.parse_args()
@@ -153,14 +168,14 @@ def infer_input_stage(model: object, location: object) -> Optional[str]:
     model_text = normalize(model)
     location_text = normalize(location)
 
-    if "/input_reduction/" not in location_text:
+    if not any(segment in location_text for segment in INPUT_SEGMENTS):
         return None
 
-    model_match = re.search(r"_(960|768|640)\.(?:pt|engine)$", model_text)
+    model_match = re.search(r"_(960|768|640)(?:_(?:fp16|int8))?\.(?:pt|engine)$", model_text)
     if model_match:
         return model_match.group(1)
 
-    location_match = re.search(r"/input_reduction/(960|768|640)(?:/|$)", location_text)
+    location_match = re.search(r"/(960|768|640)(?:/|$)", location_text)
     if location_match:
         return location_match.group(1)
 
@@ -168,10 +183,6 @@ def infer_input_stage(model: object, location: object) -> Optional[str]:
 
 
 def infer_stage(model: object, location: object) -> str:
-    input_stage = infer_input_stage(model, location)
-    if input_stage is not None:
-        return input_stage
-
     model_text = normalize(model)
     location_text = normalize(location)
     combined = f"{model_text} {location_text}"
@@ -180,6 +191,24 @@ def infer_stage(model: object, location: object) -> str:
     has_pruning = "pruning" in combined or bool(re.search(r"_p\d+", model_text))
     has_quant = "quantization" in combined or "fp16" in combined or "int8" in combined
     has_baseline = "/baseline/" in location_text or "baseline" in model_text
+    input_stage = infer_input_stage(model, location)
+
+    if input_stage is not None:
+        if not has_distill and not has_pruning and not has_quant:
+            return input_stage
+
+        transform_stage = {
+            (False, False, True): "quantized_input",
+            (False, True, False): "pruned_input",
+            (False, True, True): "pruned_quantized_input",
+            (True, False, False): "distilled_input",
+            (True, False, True): "distilled_quantized_input",
+            (True, True, False): "distilled_pruned_input",
+            (True, True, True): "distilled_pruned_quantized_input",
+        }
+        stage = transform_stage.get((has_distill, has_pruning, has_quant))
+        if stage:
+            return stage
 
     transform_stage = {
         (True, False, False): "distilled",
@@ -462,7 +491,7 @@ def marker_key(label: str) -> str:
     return "third"
 
 
-def build_figure(points: dict[str, tuple[float, float, int]]):
+def build_figure(points: dict[str, tuple[float, float, int]], *, map_label: str):
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
 
@@ -535,7 +564,7 @@ def build_figure(points: dict[str, tuple[float, float, int]]):
     ax.set_xlim(max(0.0, x_min - x_pad), x_max + x_pad)
     ax.set_ylim(max(0.0, y_min - y_pad), min(1.0, y_max + y_pad))
     ax.set_xlabel("Average latency (ms)", fontsize=10)
-    ax.set_ylabel("Average mAP50-95", fontsize=10)
+    ax.set_ylabel(map_label, fontsize=10)
     ax.grid(True, color="#d9d9d9", linestyle="--", linewidth=0.7, alpha=0.8)
     ax.tick_params(labelsize=8)
 
@@ -569,6 +598,10 @@ def save_figure(fig, output_path: Path) -> Path:
 
 def main() -> int:
     args = parse_args()
+    global MAP_COLUMN, REQUIRED_COLUMNS
+
+    MAP_COLUMN = VALIDATION2_MAP_COLUMN if args.validation2 else DEFAULT_MAP_COLUMN
+    REQUIRED_COLUMNS = ["Model", "Location", MAP_COLUMN, LATENCY_COLUMN]
 
     if args.no_show or args.output:
         try:
@@ -587,7 +620,7 @@ def main() -> int:
 
     for label in POINT_ORDER:
         latency, map_value, count = points[label]
-        print(f"{label}: n={count}, avg mAP50-95={map_value:.4f}, avg latency={latency:.2f} ms")
+        print(f"{label}: n={count}, avg {MAP_COLUMN}={map_value:.4f}, avg latency={latency:.2f} ms")
 
     try:
         import matplotlib.pyplot as plt
@@ -595,7 +628,8 @@ def main() -> int:
         print(f"Error importing matplotlib: {exc}. Install it with 'pip install matplotlib'.", file=sys.stderr)
         return 1
 
-    fig = build_figure(points)
+    map_label = "Average Validation2 mAP50-95" if args.validation2 else "Average mAP50-95"
+    fig = build_figure(points, map_label=map_label)
 
     saved_path: Optional[Path] = None
     try:

@@ -33,46 +33,76 @@ MAP_COLUMN = "mAP50-95"
 LATENCY_COLUMN = "Latency ms"
 REQUIRED_COLUMNS = ["Model", "Location", MAP_COLUMN, LATENCY_COLUMN]
 DISTILL_TOKENS = ("distill", "distillation", "student", "teacher", "kd")
+INPUT_SEGMENTS = (
+    "/input_reduction/",
+    "/quantization_input/",
+    "/pruning_input/",
+    "/pruning_quantization_input/",
+    "/distilled_input/",
+    "/distilled_quantized_input/",
+)
 
 GROUP_COLORS = {
     "Baseline": "#111111",
-    "Distilled": "#1b9e77",
+    "Quantized": "#1f78b4",
     "Pruned": "#d95f02",
     "Distilled + Pruned": "#7570b3",
-}
-
-MARKERS = {
-    "base": "o",
-    "accelerated": "s",
-    "fp16": "^",
-    "int8": "D",
 }
 
 POINT_ORDER = [
     "Uncompressed",
     "Baseline engine",
     "Baseline FP16",
-    "Distilled + Accelerated",
-    "Distilled + FP16",
-    "Distilled + INT8",
+    "Quantized + 960",
+    "Quantized + 768",
     "Pruned + Accelerated",
+    "Pruned + 960",
     "Pruned + FP16",
+    "Pruned + 960 + FP16",
     "Pruned + INT8",
     "Distilled + Pruned + Accel.",
     "Distilled + Pruned + FP16",
     "Distilled + Pruned + INT8",
 ]
 
-ANNOTATIONS = {
-    "Uncompressed": ("Uncomp.", (-10, -10)),
+POINT_LABELS = {
+    "Uncompressed": "PT",
+    "Baseline engine": "Accel.",
+    "Baseline FP16": "FP16",
+    "Quantized + 960": "75%px",
+    "Quantized + 768": "60%px",
+    "Pruned + Accelerated": "Accel.",
+    "Pruned + 960": "75%px",
+    "Pruned + FP16": "FP16",
+    "Pruned + 960 + FP16": "75%px+FP16",
+    "Pruned + INT8": "INT8",
+    "Distilled + Pruned + Accel.": "Accel.",
+    "Distilled + Pruned + FP16": "FP16",
+    "Distilled + Pruned + INT8": "INT8",
+}
+
+LABEL_OFFSETS = {
+    "Uncompressed": (-10, -10),
+    "Baseline engine": (-2, 8),
+    "Baseline FP16": (-8, 4),
+    "Quantized + 960": (-6, 0),
+    "Quantized + 768": (-2, 6),
+    "Pruned + Accelerated": (8, 0),
+    "Pruned + 960": (10, -4),
+    "Pruned + FP16": (8, 0),
+    "Pruned + 960 + FP16": (-4, 4),
+    "Pruned + INT8": (8, -4),
+    "Distilled + Pruned + Accel.": (8, 0),
+    "Distilled + Pruned + FP16": (8, 2),
+    "Distilled + Pruned + INT8": (8, -8),
 }
 
 PATHS = [
-    ["Uncompressed", "Baseline engine"],
-    ["Baseline engine", "Baseline FP16"],
-    ["Baseline engine", "Distilled + Accelerated", "Distilled + FP16", "Distilled + INT8"],
-    ["Baseline engine", "Pruned + Accelerated", "Pruned + FP16", "Pruned + INT8"],
-    ["Baseline engine", "Distilled + Pruned + Accel.", "Distilled + Pruned + FP16", "Distilled + Pruned + INT8"],
+    ["Uncompressed", "Baseline engine", "Baseline FP16"],
+    ["Baseline FP16", "Quantized + 960", "Quantized + 768"],
+    ["Baseline engine", "Pruned + Accelerated", "Pruned + 960", "Pruned + 960 + FP16"],
+    ["Pruned + Accelerated", "Pruned + FP16", "Pruned + INT8"],
+    ["Baseline engine", "Distilled + Pruned + Accel.", "Distilled + Pruned + FP16", "Distilled + Pruned + INT8"]
 ]
 
 ROW_FILTERS = {
@@ -85,20 +115,26 @@ ROW_FILTERS = {
     "Baseline FP16": [
         {"stage": "quantized", "artifact": "engine", "quant_mode": "fp16"},
     ],
-    "Distilled + Accelerated": [
-        {"stage": "distilled", "artifact": "engine", "quant_mode": "none"},
+    "Quantized + 960": [
+        {"stage": "quantized_input", "artifact": "engine", "quant_mode": "fp16", "input_stage": "960"},
     ],
-    "Distilled + FP16": [
-        {"stage": "distilled_quantized", "artifact": "engine", "quant_mode": "fp16"},
+    "Quantized + 768": [
+        {"stage": "quantized_input", "artifact": "engine", "quant_mode": "fp16", "input_stage": "768"},
     ],
-    "Distilled + INT8": [
-        {"stage": "distilled_quantized", "artifact": "engine", "quant_mode": "int8"},
+    "Quantized + 640": [
+        {"stage": "quantized_input", "artifact": "engine", "quant_mode": "fp16", "input_stage": "640"},
     ],
     "Pruned + Accelerated": [
         {"stage": "pruned", "artifact": "engine", "quant_mode": "none"},
     ],
+    "Pruned + 960": [
+        {"stage": "pruned_input", "artifact": "engine", "quant_mode": "none", "input_stage": "960"},
+    ],
     "Pruned + FP16": [
         {"stage": "pruned_quantized", "artifact": "engine", "quant_mode": "fp16"},
+    ],
+    "Pruned + 960 + FP16": [
+        {"stage": "pruned_quantized_input", "artifact": "engine", "quant_mode": "fp16", "input_stage": "960"},
     ],
     "Pruned + INT8": [
         {"stage": "pruned_quantized", "artifact": "engine", "quant_mode": "int8"},
@@ -175,6 +211,24 @@ def infer_quant_mode(model: object, location: object) -> str:
     return "none"
 
 
+def infer_input_stage(model: object, location: object) -> Optional[str]:
+    model_text = normalize(model)
+    location_text = normalize(location)
+
+    if not any(segment in location_text for segment in INPUT_SEGMENTS):
+        return None
+
+    model_match = re.search(r"_(960|768|640)(?:_(?:fp16|int8))?\.engine$", model_text)
+    if model_match:
+        return model_match.group(1)
+
+    location_match = re.search(r"/(960|768|640)(?:/|$)", location_text)
+    if location_match:
+        return location_match.group(1)
+
+    return None
+
+
 def infer_stage(model: object, location: object) -> str:
     model_text = normalize(model)
     location_text = normalize(location)
@@ -184,6 +238,20 @@ def infer_stage(model: object, location: object) -> str:
     has_pruning = "pruning" in combined or bool(re.search(r"_p\d+", model_text))
     has_quant = "quantization" in combined or "fp16" in combined or "int8" in combined
     has_baseline = "/baseline/" in location_text or "baseline" in model_text
+    input_stage = infer_input_stage(model, location)
+
+    if input_stage is not None:
+        transform_stage = {
+            (False, False, False): "input",
+            (False, False, True): "quantized_input",
+            (False, True, False): "pruned_input",
+            (False, True, True): "pruned_quantized_input",
+            (True, False, False): "distilled_input",
+            (True, False, True): "distilled_quantized_input",
+            (True, True, False): "distilled_pruned_input",
+            (True, True, True): "distilled_pruned_quantized_input",
+        }
+        return transform_stage[(has_distill, has_pruning, has_quant)]
 
     transform_stage = {
         (True, False, False): "distilled",
@@ -240,6 +308,7 @@ def load_object_rows(csv_path: Path) -> list[dict[str, object]]:
                     "stage": infer_stage(row.get("Model", ""), row.get("Location", "")),
                     "artifact": infer_artifact(row.get("Model", "")),
                     "quant_mode": infer_quant_mode(row.get("Model", ""), row.get("Location", "")),
+                    "input_stage": infer_input_stage(row.get("Model", ""), row.get("Location", "")),
                     MAP_COLUMN: map_value,
                     LATENCY_COLUMN: latency_value,
                 }
@@ -255,11 +324,7 @@ def filtered_rows(rows: list[dict[str, object]], filters: list[dict[str, str]]) 
     matched: list[dict[str, object]] = []
     for row in rows:
         for row_filter in filters:
-            if (
-                str(row["stage"]) == row_filter["stage"]
-                and str(row["artifact"]) == row_filter["artifact"]
-                and str(row["quant_mode"]) == row_filter["quant_mode"]
-            ):
+            if all(str(row.get(key)) == value for key, value in row_filter.items()):
                 matched.append(row)
                 break
     return matched
@@ -354,28 +419,17 @@ def build_points(rows: list[dict[str, object]]) -> dict[str, tuple[float, float,
 def group_key(label: str) -> str:
     if label in {"Uncompressed", "Baseline engine", "Baseline FP16"}:
         return "Baseline"
+    if label.startswith("Quantized +"):
+        return "Quantized"
     if label.startswith("Distilled + Pruned"):
         return "Distilled + Pruned"
-    if label.startswith("Distilled"):
-        return "Distilled"
     return "Pruned"
-
-
-def marker_key(label: str) -> str:
-    if label == "Uncompressed":
-        return "base"
-    if label == "Baseline engine":
-        return "accelerated"
-    if "INT8" in label:
-        return "int8"
-    if "FP16" in label:
-        return "fp16"
-    return "accelerated"
 
 
 def build_figure(points: dict[str, tuple[float, float, int]]):
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
+    import matplotlib.patheffects as pe
 
     plt.rcParams.update(
         {
@@ -387,7 +441,7 @@ def build_figure(points: dict[str, tuple[float, float, int]]):
         }
     )
 
-    fig, ax = plt.subplots(figsize=(4.15, 3.55), dpi=300)
+    fig, ax = plt.subplots(figsize=(4.3, 3.7), dpi=300)
 
     all_latencies = [point[0] for point in points.values()]
     all_maps = [point[1] for point in points.values()]
@@ -408,33 +462,33 @@ def build_figure(points: dict[str, tuple[float, float, int]]):
     for label in POINT_ORDER:
         latency, map_value, _ = points[label]
         color = GROUP_COLORS[group_key(label)]
-        marker = MARKERS[marker_key(label)]
         size = 62 if label in {"Uncompressed", "Baseline engine"} else 58
         ax.scatter(
             latency,
             map_value,
             color=color,
-            marker=marker,
+            marker="o",
             s=size,
-            edgecolors="black",
-            linewidths=0.7,
+            edgecolors="white",
+            linewidths=0.9,
             zorder=3,
         )
 
-        if label in ANNOTATIONS:
-            text, offset = ANNOTATIONS[label]
-            ax.annotate(
-                text,
-                xy=(latency, map_value),
-                xytext=offset,
-                textcoords="offset points",
-                ha="center" if offset[0] == 0 else ("left" if offset[0] > 0 else "right"),
-                va="bottom" if offset[1] > 0 else "top",
-                fontsize=6.9,
-                color=color,
-                weight="bold",
-                zorder=4,
-            )
+        text = POINT_LABELS[label]
+        offset = LABEL_OFFSETS[label]
+        annotation = ax.annotate(
+            text,
+            xy=(latency, map_value),
+            xytext=offset,
+            textcoords="offset points",
+            ha="center" if offset[0] == 0 else ("left" if offset[0] > 0 else "right"),
+            va="bottom" if offset[1] > 0 else "top",
+            fontsize=6.9,
+            color=color,
+            weight="bold",
+            zorder=4,
+        )
+        annotation.set_path_effects([pe.withStroke(linewidth=1.8, foreground="white")])
 
     x_min = min(all_latencies)
     x_max = max(all_latencies)
@@ -451,19 +505,17 @@ def build_figure(points: dict[str, tuple[float, float, int]]):
     ax.tick_params(labelsize=8)
 
     legend_handles = [
-        Line2D([0], [0], color=GROUP_COLORS["Distilled"], linewidth=1.6, label="Distilled"),
+        Line2D([0], [0], color=GROUP_COLORS["Baseline"], linewidth=1.6, label="Baseline"),
+        Line2D([0], [0], color=GROUP_COLORS["Quantized"], linewidth=1.6, label="Quantized"),
         Line2D([0], [0], color=GROUP_COLORS["Pruned"], linewidth=1.6, label="Pruned"),
         Line2D([0], [0], color=GROUP_COLORS["Distilled + Pruned"], linewidth=1.6, label="Distilled + Pruned"),
-        Line2D([0], [0], marker=MARKERS["accelerated"], color="black", linestyle="None", markersize=5.8, label="Accelerated"),
-        Line2D([0], [0], marker=MARKERS["fp16"], color="black", linestyle="None", markersize=5.8, label="FP16"),
-        Line2D([0], [0], marker=MARKERS["int8"], color="black", linestyle="None", markersize=5.8, label="INT8"),
     ]
     ax.legend(
         handles=legend_handles,
         loc="lower right",
         fontsize=6.4,
         frameon=False,
-        ncol=2,
+        ncol=1,
         columnspacing=1.0,
         handletextpad=0.4,
         borderaxespad=0.3,

@@ -1,22 +1,27 @@
 #!/usr/bin/env python
 """
-Horizontal comparison of knowledge-distillation chains for n- and s-model students using .engine rows.
+Plot knowledge-distillation trade-offs for object and pose models.
 
-The figure shows two side-by-side plots:
-
-- n-student chains
-- s-student chains
-
-Each plot overlays three group lines:
-
+The figure contains four panels:
+- YOLO11 object
 - YOLO26 object
 - YOLO11 pose
 - YOLO26 pose
 
+Each panel shows N-, S-, M-, and L-student lines, connecting:
+baseline -> from X -> from L -> from M -> from S
+
+Artifact selection is configurable:
+- `mixed`: object uses `.engine`, pose uses `.pt`
+- `engine`: both object and pose use `.engine`
+- `pt`: both object and pose use `.pt`
+
+Object panels use `mAP50-95`, while the pose panels use `Validation2 mAP50-95`.
+
 Run:
   python Figures/line/line_map50_95_vs_latency_knowledge_n_chains.py
   python Figures/line/line_map50_95_vs_latency_knowledge_n_chains.py --no-show
-  python Figures/line/line_map50_95_vs_latency_knowledge_n_chains.py --output Figures/produced_images/map50_95_vs_latency_knowledge_n_chains.png
+  python Figures/line/line_map50_95_vs_latency_knowledge_n_chains.py --output Figures/produced_images/map50_95_vs_latency_knowledge_ns_chains.png
 """
 
 from __future__ import annotations
@@ -30,24 +35,34 @@ from typing import Optional
 
 from figure_save_dialog import prompt_save_figure
 
-MAP_COLUMN = "mAP50-95"
+DEFAULT_MAP_COLUMN = "mAP50-95"
+POSE_VALIDATION2_MAP_COLUMN = "Validation2 mAP50-95"
 LATENCY_COLUMN = "Latency ms"
-REQUIRED_COLUMNS = ["Model", "Location", MAP_COLUMN, LATENCY_COLUMN]
+REQUIRED_COLUMNS = [
+    "Model",
+    "Location",
+    DEFAULT_MAP_COLUMN,
+    POSE_VALIDATION2_MAP_COLUMN,
+    LATENCY_COLUMN,
+]
 CSV_PATH = Path(__file__).resolve().parents[2] / "research" / "model_summaries.csv"
-MM_PER_INCH = 25.4
-A4_LANDSCAPE_WIDTH_MM = 297.0
-A4_LANDSCAPE_HEIGHT_MM = 210.0
-HORIZONTAL_MARGIN_MM = 24.0
-VERTICAL_MARGIN_MM = 24.0
-FIGURE_WIDTH_IN = (A4_LANDSCAPE_WIDTH_MM - (2 * HORIZONTAL_MARGIN_MM)) / MM_PER_INCH
-FIGURE_HEIGHT_IN = (A4_LANDSCAPE_HEIGHT_MM - (2 * VERTICAL_MARGIN_MM)) / MM_PER_INCH
+FIGURE_WIDTH_IN = 7.1
+FIGURE_HEIGHT_IN = 6.35
+TITLE_FONT_SIZE = 15
+LABEL_FONT_SIZE = 15
+TICK_FONT_SIZE = 12.5
+LEGEND_FONT_SIZE = 12
 
-TARGET_ORDER = ["n", "s"]
-
-OBJECT_BASELINE_RE = re.compile(r"^(?P<family>(11|26)[ns])_ds3_baseline\.engine$", re.IGNORECASE)
-OBJECT_DISTILL_RE = re.compile(r"^(?P<family>(11|26)[ns])_ds3_from_(?P<src>(11|26)[slmx])\.engine$", re.IGNORECASE)
-POSE_BASELINE_RE = re.compile(r"^(?P<family>(11|26)[ns])_pose_baseline\.engine$", re.IGNORECASE)
-POSE_DISTILL_RE = re.compile(r"^(?P<family>(11|26)[ns])_pose_from_(?P<src>(11|26)[slmx])\.engine$", re.IGNORECASE)
+OBJECT_BASELINE_RE = re.compile(r"^(?P<family>(11|26)[nsml])_ds3_baseline\.(?P<artifact>pt|engine)$", re.IGNORECASE)
+OBJECT_DISTILL_RE = re.compile(
+    r"^(?P<family>(11|26)[nsml])_ds3_from_(?P<src>(11|26)[slmx])\.(?P<artifact>pt|engine)$",
+    re.IGNORECASE,
+)
+POSE_BASELINE_RE = re.compile(r"^(?P<family>(11|26)[nsml])_pose_baseline\.(?P<artifact>pt|engine)$", re.IGNORECASE)
+POSE_DISTILL_RE = re.compile(
+    r"^(?P<family>(11|26)[nsml])_pose_from_(?P<src>(11|26)[slmx])\.(?P<artifact>pt|engine)$",
+    re.IGNORECASE,
+)
 
 GROUP_ORDER = [
     ("11", "object"),
@@ -56,28 +71,40 @@ GROUP_ORDER = [
     ("26", "pose"),
 ]
 
-GROUP_LABELS = {
-    ("26", "object"): "YOLO26 Obj",
-    ("11", "object"): "YOLO11 Obj",
-    ("11", "pose"): "YOLO11 KP",
-    ("26", "pose"): "YOLO26 KP",
+GROUP_TITLES = {
+    ("11", "object"): "YOLO11 Object",
+    ("26", "object"): "YOLO26 Object",
+    ("11", "pose"): "YOLO11 Pose",
+    ("26", "pose"): "YOLO26 Pose",
 }
 
-GROUP_COLORS = {
-    ("11", "object"): "#1f77b4",
-    ("26", "object"): "#2ca02c",
-    ("11", "pose"): "#ff7f0e",
-    ("26", "pose"): "#d62728",
+TARGET_ORDER = ["n", "s", "m", "l"]
+GROUP_TARGETS = {
+    ("11", "object"): ["n", "s", "l"],
+    ("26", "object"): ["n", "s", "m", "l"],
+    ("11", "pose"): ["n", "s", "l"],
+    ("26", "pose"): ["n", "s", "m", "l"],
 }
 
-SUBPLOT_TITLES = {
-    "n": "n-Student Chains",
-    "s": "s-Student Chains",
+TARGET_LABELS = {
+    "n": "N",
+    "s": "S",
+    "m": "M",
+    "l": "L",
+}
+
+TARGET_COLORS = {
+    "n": "#1f77b4",
+    "s": "#ff7f0e",
+    "m": "#2ca02c",
+    "l": "#d62728",
 }
 
 STAGE_ORDER_BY_TARGET = {
     "n": ["baseline", "x", "l", "m", "s"],
     "s": ["baseline", "x", "l", "m"],
+    "m": ["baseline", "x", "l"],
+    "l": ["baseline", "x"],
 }
 
 STAGE_STYLES = {
@@ -91,69 +118,99 @@ STAGE_STYLES = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Plot mAP50-95 vs latency for 11/26 n- and s-student distillation .engine chains with baselines."
+        description="Plot knowledge-distillation trade-offs with configurable pt/engine artifact selection."
     )
     parser.add_argument("--csv", type=Path, default=CSV_PATH, help="Path to the model summary CSV.")
+    parser.add_argument(
+        "--artifact-mode",
+        choices=["mixed", "engine", "pt"],
+        default="mixed",
+        help="Artifact selection: mixed keeps object on engine and pose on pt; engine/pt force both domains.",
+    )
     parser.add_argument("--output", type=Path, help="Optional PNG output path.")
     parser.add_argument("--no-show", action="store_true", help="Build the figure without opening a plot window.")
     return parser.parse_args()
 
 
-def parse_model(model: str) -> Optional[dict[str, str]]:
+def allowed_artifact(domain: str, artifact_mode: str) -> str:
+    if artifact_mode == "mixed":
+        return "engine" if domain == "object" else "pt"
+    return artifact_mode
+
+
+def parse_model(model: str, *, artifact_mode: str) -> Optional[dict[str, str]]:
     text = str(model).strip()
     if not text:
         return None
 
     match = OBJECT_BASELINE_RE.match(text)
     if match:
+        artifact = match.group("artifact").lower()
+        if artifact != allowed_artifact("object", artifact_mode):
+            return None
         family = match.group("family").lower()
         return {
             "family": family,
+            "series": family[:2],
             "target": family[-1],
             "domain": "object",
             "stage": "baseline",
+            "artifact": artifact,
         }
 
     match = OBJECT_DISTILL_RE.match(text)
     if match:
+        artifact = match.group("artifact").lower()
+        if artifact != allowed_artifact("object", artifact_mode):
+            return None
         family = match.group("family").lower()
         source_family = match.group("src").lower()
         if family[:2] != source_family[:2]:
             return None
         return {
             "family": family,
+            "series": family[:2],
             "target": family[-1],
             "domain": "object",
             "stage": source_family[-1],
+            "artifact": artifact,
         }
 
     match = POSE_BASELINE_RE.match(text)
     if match:
+        artifact = match.group("artifact").lower()
+        if artifact != allowed_artifact("pose", artifact_mode):
+            return None
         family = match.group("family").lower()
         return {
             "family": family,
+            "series": family[:2],
             "target": family[-1],
             "domain": "pose",
             "stage": "baseline",
+            "artifact": artifact,
         }
 
     match = POSE_DISTILL_RE.match(text)
     if match:
+        artifact = match.group("artifact").lower()
+        if artifact != allowed_artifact("pose", artifact_mode):
+            return None
         family = match.group("family").lower()
         source_family = match.group("src").lower()
-        if family[:2] != source_family[:2]:
-            return None
         return {
             "family": family,
+            "series": family[:2],
             "target": family[-1],
             "domain": "pose",
             "stage": source_family[-1],
+            "artifact": artifact,
         }
 
     return None
 
 
-def load_plot_rows(csv_path: Path) -> list[dict[str, object]]:
+def load_plot_rows(csv_path: Path, *, artifact_mode: str) -> list[dict[str, object]]:
     if not csv_path.exists():
         raise FileNotFoundError(f"CSV not found: {csv_path}")
 
@@ -166,43 +223,53 @@ def load_plot_rows(csv_path: Path) -> list[dict[str, object]]:
 
         usable: list[dict[str, object]] = []
         for row in reader:
-            parsed = parse_model(row.get("Model", ""))
+            parsed = parse_model(row.get("Model", ""), artifact_mode=artifact_mode)
             if parsed is None:
                 continue
 
+            map_column = POSE_VALIDATION2_MAP_COLUMN if parsed["domain"] == "pose" else DEFAULT_MAP_COLUMN
+
             try:
-                map_value = float(str(row[MAP_COLUMN]).strip())
+                map_value = float(str(row[map_column]).strip())
                 latency_value = float(str(row[LATENCY_COLUMN]).strip())
             except (TypeError, ValueError):
                 continue
 
-            usable.append({**row, **parsed, MAP_COLUMN: map_value, LATENCY_COLUMN: latency_value})
+            usable.append(
+                {
+                    **row,
+                    **parsed,
+                    "map_column": map_column,
+                    "map_value": map_value,
+                    LATENCY_COLUMN: latency_value,
+                }
+            )
 
     if not usable:
-        raise ValueError("No matching distillation .engine rows contain numeric mAP50-95 and latency values.")
+        raise ValueError("No matching distillation rows contain numeric mAP50-95 and latency values.")
 
     return usable
 
 
 def build_group_rows(
     rows: list[dict[str, object]]
-) -> dict[str, dict[tuple[str, str], dict[str, dict[str, object]]]]:
-    grouped: dict[str, dict[tuple[str, str], dict[str, dict[str, object]]]] = {
-        target: {group_key: {} for group_key in GROUP_ORDER} for target in TARGET_ORDER
+) -> dict[tuple[str, str], dict[str, dict[str, dict[str, object]]]]:
+    grouped: dict[tuple[str, str], dict[str, dict[str, dict[str, object]]]] = {
+        group_key: {target: {} for target in TARGET_ORDER} for group_key in GROUP_ORDER
     }
 
     for row in rows:
+        group_key = (str(row["series"]), str(row["domain"]))
         target = str(row["target"])
-        group_key = (str(row["family"])[:2], str(row["domain"]))
         stage = str(row["stage"])
-        if target in grouped and group_key in grouped[target] and stage in STAGE_STYLES:
-            grouped[target][group_key][stage] = row
+        if group_key in grouped and target in grouped[group_key] and stage in STAGE_STYLES:
+            grouped[group_key][target][stage] = row
 
     missing_baselines: list[str] = []
-    for target in TARGET_ORDER:
-        for group_key in GROUP_ORDER:
-            if "baseline" not in grouped[target][group_key]:
-                missing_baselines.append(f"{target} / {GROUP_LABELS[group_key]}")
+    for group_key in GROUP_ORDER:
+        for target in GROUP_TARGETS[group_key]:
+            if "baseline" not in grouped[group_key][target]:
+                missing_baselines.append(f"{GROUP_TITLES[group_key]} {TARGET_LABELS[target]}")
 
     if missing_baselines:
         raise ValueError("Missing one or more required distillation baselines: " + ", ".join(missing_baselines))
@@ -210,20 +277,21 @@ def build_group_rows(
     return grouped
 
 
-def print_group_summary(grouped_rows: dict[str, dict[tuple[str, str], dict[str, dict[str, object]]]]) -> None:
-    for target in TARGET_ORDER:
-        for group_key in GROUP_ORDER:
-            stages = [
-                STAGE_STYLES[stage]["label"]
-                for stage in STAGE_ORDER_BY_TARGET[target]
-                if stage in grouped_rows[target][group_key]
-            ]
-            print(f"- {target} / {GROUP_LABELS[group_key]}: {', '.join(stages)}")
+def print_group_summary(
+    grouped_rows: dict[tuple[str, str], dict[str, dict[str, dict[str, object]]]]
+) -> None:
+    for group_key in GROUP_ORDER:
+        target_summaries = []
+        for target in GROUP_TARGETS[group_key]:
+            present_stages = [stage for stage in STAGE_ORDER_BY_TARGET[target] if stage in grouped_rows[group_key][target]]
+            target_summaries.append(f"{TARGET_LABELS[target]}={','.join(present_stages)}")
+        print(f"- {GROUP_TITLES[group_key]}: {'; '.join(target_summaries)}")
 
 
-def build_figure(grouped_rows: dict[str, dict[tuple[str, str], dict[str, dict[str, object]]]]):
+def build_figure(grouped_rows: dict[tuple[str, str], dict[str, dict[str, dict[str, object]]]]):
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
+    from matplotlib.ticker import FormatStrFormatter
 
     plt.rcParams.update(
         {
@@ -235,69 +303,91 @@ def build_figure(grouped_rows: dict[str, dict[tuple[str, str], dict[str, dict[st
         }
     )
 
-    label_offsets = {
-        ("11", "object"): (8, -12),
-        ("26", "object"): (8, -12),
-        ("11", "pose"): (8, -12),
-        ("26", "pose"): (8, 10),
-    }
+    fig, axes = plt.subplots(2, 2, figsize=(FIGURE_WIDTH_IN, FIGURE_HEIGHT_IN), sharey="row")
+    axes_map = {group_key: axes.flat[index] for index, group_key in enumerate(GROUP_ORDER)}
+    panel_xs: dict[tuple[str, str], list[float]] = {group_key: [] for group_key in GROUP_ORDER}
+    row_ys: dict[str, list[float]] = {"object": [], "pose": []}
 
-    fig, axes = plt.subplots(1, 2, figsize=(FIGURE_WIDTH_IN, FIGURE_HEIGHT_IN * 0.56), sharey=True)
+    for group_key in GROUP_ORDER:
+        ax = axes_map[group_key]
+        row_key = str(group_key[1])
 
-    for index, target in enumerate(TARGET_ORDER):
-        ax = axes[index]
-
-        for group_key in GROUP_ORDER:
-            available_stages = [
-                stage for stage in STAGE_ORDER_BY_TARGET[target] if stage in grouped_rows[target][group_key]
-            ]
-            if len(available_stages) < 2:
+        for target in GROUP_TARGETS[group_key]:
+            target_rows = grouped_rows[group_key][target]
+            available_stages = [stage for stage in STAGE_ORDER_BY_TARGET[target] if stage in target_rows]
+            if not available_stages:
                 continue
 
-            group_color = GROUP_COLORS[group_key]
-            latencies = [float(grouped_rows[target][group_key][stage][LATENCY_COLUMN]) for stage in available_stages]
-            map_values = [float(grouped_rows[target][group_key][stage][MAP_COLUMN]) for stage in available_stages]
+            latencies = [float(target_rows[stage][LATENCY_COLUMN]) for stage in available_stages]
+            map_values = [float(target_rows[stage]["map_value"]) for stage in available_stages]
+            panel_xs[group_key].extend(latencies)
+            row_ys[row_key].extend(map_values)
 
-            ax.plot(latencies, map_values, color=group_color, linewidth=1.2, zorder=1)
+            ax.plot(
+                latencies,
+                map_values,
+                color=TARGET_COLORS[target],
+                linewidth=1.7,
+                zorder=1,
+            )
 
             for stage in available_stages:
-                stage_latency = float(grouped_rows[target][group_key][stage][LATENCY_COLUMN])
-                stage_map = float(grouped_rows[target][group_key][stage][MAP_COLUMN])
+                stage_latency = float(target_rows[stage][LATENCY_COLUMN])
+                stage_map = float(target_rows[stage]["map_value"])
                 ax.scatter(
                     stage_latency,
                     stage_map,
-                    color=group_color,
+                    color=TARGET_COLORS[target],
                     marker=STAGE_STYLES[stage]["marker"],
-                    s=82,
-                    edgecolors="black",
-                    linewidths=0.8,
+                    s=115,
+                    edgecolors="white",
+                    linewidths=1.0,
                     zorder=3,
                 )
 
-            end_stage = available_stages[-1]
-            end_latency = float(grouped_rows[target][group_key][end_stage][LATENCY_COLUMN])
-            end_map = float(grouped_rows[target][group_key][end_stage][MAP_COLUMN])
-            offset_x, offset_y = label_offsets[group_key]
-            ax.annotate(
-                GROUP_LABELS[group_key],
-                xy=(end_latency, end_map),
-                xytext=(offset_x, offset_y),
-                textcoords="offset points",
-                color=group_color,
-                fontsize=9.5,
-                fontweight="bold",
-                ha="left",
-                va="center",
-            )
-
-        ax.set_title(SUBPLOT_TITLES[target], fontsize=11)
+        ax.set_title(GROUP_TITLES[group_key], fontsize=TITLE_FONT_SIZE, pad=8)
         ax.grid(True, color="#d9d9d9", linestyle="--", linewidth=0.7, alpha=0.8)
-        ax.tick_params(labelsize=9)
-        ax.set_xlabel("Latency ms", fontsize=11)
-        if index == 0:
-            ax.set_ylabel(MAP_COLUMN, fontsize=11)
+        ax.tick_params(labelsize=TICK_FONT_SIZE, width=1.0, length=5)
+        ax.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
 
-    legend_stages = ["baseline", "x", "l", "m", "s"]
+        if panel_xs[group_key]:
+            x_min = min(panel_xs[group_key])
+            x_max = max(panel_xs[group_key])
+            x_pad = max((x_max - x_min) * 0.06, 1.0)
+            ax.set_xlim(x_min - x_pad, x_max + x_pad)
+
+    object_axes = [axes_map[("11", "object")], axes_map[("26", "object")]]
+    pose_axes = [axes_map[("11", "pose")], axes_map[("26", "pose")]]
+
+    if row_ys["object"]:
+        object_y_min = min(row_ys["object"])
+        object_y_max = max(row_ys["object"])
+        object_y_pad = max((object_y_max - object_y_min) * 0.10, 0.015)
+        for ax in object_axes:
+            ax.set_ylim(object_y_min - object_y_pad, object_y_max + object_y_pad)
+
+    if row_ys["pose"]:
+        pose_y_min = min(row_ys["pose"])
+        pose_y_max = max(row_ys["pose"])
+        pose_y_pad = max((pose_y_max - pose_y_min) * 0.10, 0.015)
+        for ax in pose_axes:
+            ax.set_ylim(pose_y_min - pose_y_pad, pose_y_max + pose_y_pad)
+
+    axes[0][0].set_ylabel(DEFAULT_MAP_COLUMN, fontsize=LABEL_FONT_SIZE)
+    axes[1][0].set_ylabel(POSE_VALIDATION2_MAP_COLUMN, fontsize=LABEL_FONT_SIZE)
+    axes[1][0].set_xlabel("Latency ms", fontsize=LABEL_FONT_SIZE)
+    axes[1][1].set_xlabel("Latency ms", fontsize=LABEL_FONT_SIZE)
+
+    target_handles = [
+        Line2D(
+            [0],
+            [0],
+            color=TARGET_COLORS[target],
+            linewidth=1.6,
+            label=TARGET_LABELS[target],
+        )
+        for target in TARGET_ORDER
+    ]
     stage_handles = [
         Line2D(
             [0],
@@ -305,33 +395,37 @@ def build_figure(grouped_rows: dict[str, dict[tuple[str, str], dict[str, dict[st
             marker=STAGE_STYLES[stage]["marker"],
             color="black",
             linestyle="None",
-            markerfacecolor="white",
-            markeredgecolor="black",
             markersize=7,
+            markeredgecolor="white",
+            markeredgewidth=1.0,
             label=STAGE_STYLES[stage]["label"],
         )
-        for stage in legend_stages
+        for stage in ["baseline", "x", "l", "m", "s"]
     ]
 
+    combined_handles = target_handles + stage_handles
     fig.legend(
-        handles=stage_handles,
-        loc="upper center",
-        bbox_to_anchor=(0.5, 0.99),
-        ncol=5,
+        handles=combined_handles,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 0.01),
+        ncol=len(combined_handles),
         frameon=False,
-        fontsize=9,
-        handletextpad=0.6,
-        columnspacing=1.0,
+        fontsize=LEGEND_FONT_SIZE,
+        handlelength=0.9,
+        handletextpad=0.55,
+        columnspacing=0.9,
+        labelspacing=0.8,
+        borderaxespad=0.2,
     )
 
-    fig.tight_layout(rect=[0, 0, 1, 0.92])
+    fig.tight_layout(rect=[0, 0.08, 1, 1], w_pad=1.1, h_pad=1.8)
     return fig
 
 
 def save_figure(fig, output_path: Path) -> Path:
     output_path = output_path.resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=200, bbox_inches="tight")
+    fig.savefig(output_path, dpi=300, bbox_inches="tight")
     return output_path
 
 
@@ -347,7 +441,7 @@ def main() -> int:
         matplotlib.use("Agg")
 
     try:
-        rows = load_plot_rows(args.csv)
+        rows = load_plot_rows(args.csv, artifact_mode=args.artifact_mode)
         grouped_rows = build_group_rows(rows)
     except Exception as exc:
         print(f"Error: {exc}", file=sys.stderr)

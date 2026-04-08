@@ -4,6 +4,8 @@ Scatter plot of mAP vs latency for object models only.
 
 Run:
   python Figures/scatter_map_vs_latency_object.py
+
+Edit `MIN_MAP` and `MAX_LATENCY_MS` below to control filtering.
 """
 
 from __future__ import annotations
@@ -17,7 +19,8 @@ from figure_save_dialog import prompt_save_figure
 
 REQUIRED_COLS = ["Model", "Location", "Latency ms"]
 MAP_COLUMN = "mAP50-95"
-MIN_MAP = 0.10
+MIN_MAP = 0.80
+MAX_LATENCY_MS = 50  # e.g. 20.0
 CSV_PATH = Path(__file__).resolve().parents[2] / "research" / "model_summaries.csv"
 FILTER_TOKEN = "/object/"
 IEEE_ONE_COL_WIDTH_IN = 3.5
@@ -123,9 +126,16 @@ def main() -> int:
     if dropped_low_map:
         print(f"Warning: dropped {dropped_low_map} rows with {MAP_COLUMN} < {MIN_MAP:.2f}.")
 
+    if MAX_LATENCY_MS is not None:
+        before_latency_cap = len(usable)
+        usable = usable[usable["Latency ms"] <= MAX_LATENCY_MS].copy()
+        dropped_high_latency = before_latency_cap - len(usable)
+        if dropped_high_latency:
+            print(f"Warning: dropped {dropped_high_latency} rows with Latency ms > {MAX_LATENCY_MS:.2f}.")
+
     if usable.empty:
         print(
-            f"Error: no object rows with numeric mAP/Latency and {MAP_COLUMN} >= {MIN_MAP:.2f}.",
+            "Error: no object rows remain after applying numeric, mAP, and latency filters.",
             file=sys.stderr,
         )
         return 1

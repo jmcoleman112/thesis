@@ -2,26 +2,22 @@
 \begin{table}[H]
 \footnotesize
 \centering
-\caption{Pose combined compression summary .}
+\caption{Pose combined compression summary.}
 \label{tab:pose_combo_summary}
 \definecolor{rulegray}{gray}{0.88}
-\begin{minipage}{0.31\linewidth}
+\begin{minipage}{0.33\linewidth}
 \centering
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3pt}
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{l c c}
 \toprule
 \textbf{Combination} & \textbf{$\Delta$mAP} & \textbf{Lat. $\downarrow$} \\
 \midrule
-\multicolumn{3}{l}{\textbf{Distilled And}} \\
-\hspace{1em}Accelerated & \autocolorcell{-4.8}{-4.8\%} & \autocolorcell{0.3}{0.3\%} \\
-\hspace{1em}FP16 & \autocolorcell{-4.6}{-4.6\%} & \autocolorcell{51.2}{51.2\%} \\
-\hspace{1em}INT8 & \autocolorcell{-58.9}{-58.9\%} & \autocolorcell{63.9}{63.9\%} \\
-
-\arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
-
 \multicolumn{3}{l}{\textbf{Pruned And}} \\
 \hspace{1em}Accelerated & \autocolorcell{-6.2}{-6.2\%} & \autocolorcell{9.0}{9.0\%} \\
+\hspace{1em}960 & \autocolorcell{-6.5}{-6.5\%} & \autocolorcell{37.5}{37.5\%} \\
 \hspace{1em}FP16 & \autocolorcell{-6.2}{-6.2\%} & \autocolorcell{52.2}{52.2\%} \\
+\hspace{1em}960+FP16 & \autocolorcell{-6.4}{-6.4\%} & \autocolorcell{58.8}{58.8\%} \\
 \hspace{1em}INT8 & \autocolorcell{-11.8}{-11.8\%} & \autocolorcell{59.2}{59.2\%} \\
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
@@ -29,12 +25,19 @@
 \multicolumn{3}{l}{\textbf{Distill+Prune And}} \\
 \hspace{1em}Accelerated & \autocolorcell{-0.1}{-0.1\%} & \autocolorcell{11.1}{11.1\%} \\
 \hspace{1em}FP16 & \autocolorcell{-0.3}{-0.3\%} & \autocolorcell{56.4}{56.4\%} \\
-\hspace{1em}INT8 & \autocolorcell{-60.1}{-60.1\%} & \autocolorcell{66.0}{66.0\%} \\
+
+\arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
+
+\multicolumn{3}{l}{\textbf{Quantized And}} \\
+\hspace{1em}960 & \autocolorcell{-33.1}{-33.1\%} & \autocolorcell{63.6}{63.6\%} \\
+\hspace{1em}768 & \autocolorcell{-46.0}{-46.0\%} & \autocolorcell{73.9}{73.9\%} \\
+\hspace{1em}640 & \autocolorcell{-54.9}{-54.9\%} & \autocolorcell{82.8}{82.8\%} \\
 \bottomrule
 \end{tabular}
+}
 \end{minipage}
 \hfill
-\begin{minipage}{0.64\linewidth}
+\begin{minipage}{0.65\linewidth}
 \centering
 \includegraphics[width=\linewidth]{../Figures/produced_images/pose_combo_summary_tradeoff.png}
 \end{minipage}

@@ -34,10 +34,18 @@ from typing import Optional
 
 from figure_save_dialog import prompt_save_figure
 
-MAP_COLUMN = "mAP50-95"
+DEFAULT_MAP_COLUMN = "mAP50-95"
+POSE_VALIDATION2_MAP_COLUMN = "Validation2 mAP50-95"
+MAP_COLUMN = DEFAULT_MAP_COLUMN
 LATENCY_COLUMN = "Latency ms"
 REQUIRED_COLUMNS = ["Model", "Location", MAP_COLUMN, LATENCY_COLUMN]
 CSV_PATH = Path(__file__).resolve().parents[2] / "research" / "model_summaries.csv"
+FIGURE_WIDTH_IN = 7.1
+FIGURE_HEIGHT_IN = 6.35
+TITLE_FONT_SIZE = 15
+LABEL_FONT_SIZE = 15
+TICK_FONT_SIZE = 12.5
+LEGEND_FONT_SIZE = 12
 
 SIZE_ORDER = ["n", "s", "m", "l", "x"]
 STAGE_ORDER = ["baseline", "960", "768", "640"]
@@ -50,10 +58,10 @@ SUBPLOT_ORDER = [
 ]
 
 SUBPLOT_TITLES = {
-    ("11", "object"): "11 DS3 Object",
-    ("26", "object"): "26 DS3 Object",
-    ("11", "pose"): "11 Pose",
-    ("26", "pose"): "26 Pose",
+    ("11", "object"): "YOLO11 Object",
+    ("26", "object"): "YOLO26 Object",
+    ("11", "pose"): "YOLO11 Pose",
+    ("26", "pose"): "YOLO26 Pose",
 }
 
 SIZE_COLORS = {
@@ -72,7 +80,7 @@ STAGE_MARKERS = {
 }
 
 STAGE_LABELS = {
-    "baseline": "baseline",
+    "baseline": "Uncompressed",
     "960": "960",
     "768": "768",
     "640": "640",
@@ -103,6 +111,11 @@ def parse_args() -> argparse.Namespace:
         choices=["engine", "pt"],
         default="engine",
         help="Artifact preference for the baseline stage (default: engine).",
+    )
+    parser.add_argument(
+        "--pose-validation2",
+        action="store_true",
+        help="Use Validation2 mAP50-95 for the pose panels only.",
     )
     parser.add_argument(
         "--output",
@@ -155,14 +168,21 @@ def parse_model(model: str) -> Optional[dict[str, str]]:
     return None
 
 
-def load_plot_rows(csv_path: Path) -> list[dict[str, object]]:
+def required_columns(*, pose_validation2: bool) -> list[str]:
+    columns = ["Model", "Location", DEFAULT_MAP_COLUMN, LATENCY_COLUMN]
+    if pose_validation2:
+        columns.append(POSE_VALIDATION2_MAP_COLUMN)
+    return columns
+
+
+def load_plot_rows(csv_path: Path, *, pose_validation2: bool) -> list[dict[str, object]]:
     if not csv_path.exists():
         raise FileNotFoundError(f"CSV not found: {csv_path}")
 
     with csv_path.open("r", newline="", encoding="utf-8") as handle:
         reader = csv.DictReader(handle)
         fieldnames = reader.fieldnames or []
-        missing = [column for column in REQUIRED_COLUMNS if column not in fieldnames]
+        missing = [column for column in required_columns(pose_validation2=pose_validation2) if column not in fieldnames]
         if missing:
             raise ValueError(f"CSV missing required columns: {missing}")
 
@@ -172,8 +192,13 @@ def load_plot_rows(csv_path: Path) -> list[dict[str, object]]:
             if parsed is None:
                 continue
 
+            map_column = (
+                POSE_VALIDATION2_MAP_COLUMN
+                if pose_validation2 and parsed["domain"] == "pose"
+                else DEFAULT_MAP_COLUMN
+            )
             try:
-                map_value = float(str(row[MAP_COLUMN]).strip())
+                map_value = float(str(row[map_column]).strip())
                 latency_value = float(str(row[LATENCY_COLUMN]).strip())
             except (TypeError, ValueError):
                 continue
@@ -302,6 +327,7 @@ def build_figure(
     subplot_paths: dict[tuple[str, str], list[dict[str, object]]],
     *,
     baseline_artifact: str,
+    pose_validation2: bool,
 ):
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
@@ -317,12 +343,14 @@ def build_figure(
         }
     )
 
-    fig, axes = plt.subplots(2, 2, figsize=(7.2, 5.4), dpi=300, sharey=True)
+    fig, axes = plt.subplots(2, 2, figsize=(FIGURE_WIDTH_IN, FIGURE_HEIGHT_IN), dpi=300, sharey="row")
     axes_map = {subplot_key: axes.flat[index] for index, subplot_key in enumerate(SUBPLOT_ORDER)}
-    all_ys: list[float] = []
+    row_ys: dict[int, list[float]] = {0: [], 1: []}
+    panel_xs: dict[tuple[str, str], list[float]] = {subplot_key: [] for subplot_key in SUBPLOT_ORDER}
 
     for subplot_key in SUBPLOT_ORDER:
         ax = axes_map[subplot_key]
+        row_index = 0 if subplot_key[1] == "object" else 1
         for path in subplot_paths[subplot_key]:
             size = str(path["size"])
             color = SIZE_COLORS.get(size, "#7f7f7f")
@@ -330,7 +358,8 @@ def build_figure(
             stages = list(path["stages"])
             xs = [float(rows[stage][LATENCY_COLUMN]) for stage in stages]
             ys = [float(rows[stage][MAP_COLUMN]) for stage in stages]
-            all_ys.extend(ys)
+            row_ys[row_index].extend(ys)
+            panel_xs[subplot_key].extend(xs)
 
             ax.plot(xs, ys, color=color, linewidth=1.35, alpha=0.95, zorder=1)
 
@@ -341,28 +370,36 @@ def build_figure(
                     float(row[MAP_COLUMN]),
                     color=color,
                     marker=STAGE_MARKERS[stage],
-                    s=42,
-                    edgecolors="black",
-                    linewidths=0.45,
+                    s=115,
+                    edgecolors="white",
+                    linewidths=1.0,
                     zorder=3,
                 )
 
-        ax.set_title(SUBPLOT_TITLES[subplot_key], fontsize=10, pad=4)
+        ax.set_title(SUBPLOT_TITLES[subplot_key], fontsize=TITLE_FONT_SIZE, pad=8)
         ax.grid(True, color="#d9d9d9", linestyle="--", linewidth=0.7, alpha=0.8)
-        ax.tick_params(labelsize=8)
+        ax.tick_params(labelsize=TICK_FONT_SIZE, width=1.0, length=5)
         ax.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
+        if panel_xs[subplot_key]:
+            x_min = min(panel_xs[subplot_key])
+            x_max = max(panel_xs[subplot_key])
+            x_pad = max((x_max - x_min) * 0.05, 0.9)
+            ax.set_xlim(x_min - x_pad, x_max + x_pad)
 
-    y_min = min(all_ys)
-    y_max = max(all_ys)
-    y_pad = max((y_max - y_min) * 0.08, 0.005)
+    for row_index, axes_row in enumerate(axes):
+        y_min = min(row_ys[row_index])
+        y_max = max(row_ys[row_index])
+        y_pad = max((y_max - y_min) * 0.10, 0.01)
+        for ax in axes_row:
+            ax.set_ylim(y_min - y_pad, y_max + y_pad)
 
-    for ax in axes.flat:
-        ax.set_ylim(y_min - y_pad, y_max + y_pad)
-
-    axes[0][0].set_ylabel(MAP_COLUMN, fontsize=10)
-    axes[1][0].set_ylabel(MAP_COLUMN, fontsize=10)
-    axes[1][0].set_xlabel("Latency ms", fontsize=10)
-    axes[1][1].set_xlabel("Latency ms", fontsize=10)
+    axes[0][0].set_ylabel(DEFAULT_MAP_COLUMN, fontsize=LABEL_FONT_SIZE)
+    axes[1][0].set_ylabel(
+        POSE_VALIDATION2_MAP_COLUMN if pose_validation2 else DEFAULT_MAP_COLUMN,
+        fontsize=LABEL_FONT_SIZE,
+    )
+    axes[1][0].set_xlabel("Latency ms", fontsize=LABEL_FONT_SIZE)
+    axes[1][1].set_xlabel("Latency ms", fontsize=LABEL_FONT_SIZE)
 
     size_handles = [
         Line2D(
@@ -381,45 +418,31 @@ def build_figure(
             marker=STAGE_MARKERS[stage],
             color="black",
             linestyle="None",
-            markersize=6.2,
+            markersize=7,
+            markeredgecolor="white",
+            markeredgewidth=1.0,
             label=STAGE_LABELS[stage],
         )
         for stage in STAGE_ORDER
     ]
 
-    size_legend = fig.legend(
-        handles=size_handles,
-        title="Model size",
-        loc="upper center",
-        bbox_to_anchor=(0.32, 1.01),
-        ncol=5,
-        frameon=False,
-        fontsize=8.5,
-        title_fontsize=8.5,
-        columnspacing=0.9,
-        handletextpad=0.45,
-    )
-    fig.add_artist(size_legend)
+    combined_handles = size_handles + stage_handles
 
     fig.legend(
-        handles=stage_handles,
-        title="Input size",
-        loc="upper center",
-        bbox_to_anchor=(0.77, 1.01),
-        ncol=4,
+        handles=combined_handles,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 0.01),
+        ncol=len(combined_handles),
         frameon=False,
-        fontsize=8.5,
-        title_fontsize=8.5,
-        columnspacing=0.9,
-        handletextpad=0.45,
+        fontsize=LEGEND_FONT_SIZE,
+        handlelength=0.9,
+        handletextpad=0.55,
+        columnspacing=0.95,
+        labelspacing=0.8,
+        borderaxespad=0.2,
     )
 
-    fig.suptitle(
-        f"Input-Resolution Paths ({baseline_artifact.upper()} baseline preference)",
-        fontsize=11.5,
-        y=1.07,
-    )
-    fig.tight_layout(rect=[0.02, 0.02, 1.0, 0.92], w_pad=1.0, h_pad=1.0)
+    fig.tight_layout(rect=[0, 0.08, 1, 1], w_pad=1.1, h_pad=1.8)
     return fig
 
 
@@ -446,7 +469,7 @@ def main() -> int:
         matplotlib.use("Agg")
 
     try:
-        rows = load_plot_rows(args.csv)
+        rows = load_plot_rows(args.csv, pose_validation2=args.pose_validation2)
         preferred_rows = choose_preferred_rows(
             rows,
             baseline_artifact=args.baseline_artifact,
@@ -473,6 +496,7 @@ def main() -> int:
     fig = build_figure(
         subplot_paths,
         baseline_artifact=args.baseline_artifact,
+        pose_validation2=args.pose_validation2,
     )
 
     saved_path: Optional[Path] = None

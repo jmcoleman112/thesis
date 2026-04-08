@@ -103,7 +103,7 @@ Figure \ref{fig:quantisation_results} shows the average mAP50-95 versus latency 
     \centering
     \caption{Quantisation trade-off.}
     \label{fig:quantisation_results}
-    \includegraphics[width=\linewidth]{images/map50_95_vs_latency_quant_pairs.png}
+    \includegraphics[width=\linewidth]{../Figures/produced_images/map50_95_vs_latency_quant_pairs.png}
 \end{figure}
 
 The figure shows that quantisation produces clear latency improvements, with INT8 giving the largest speedup in every family-task group. However, the associated accuracy cost is much more pronounced than in the hardware acceleration case. FP32 acceleration preserves accuracy almost exactly, whereas the move to INT8 shifts the points further left but also noticeably downward. This effect is particularly clear for the object models, where latency is reduced substantially but mAP50-95 falls by a visible margin. The pose models also experience a drop, though they remain at relatively high absolute accuracy. Overall, the results indicate that quantisation is effective for improving runtime efficiency, but that the gain is achieved through a more explicit accuracy--latency trade-off than hardware acceleration alone.
@@ -133,6 +133,81 @@ Figure \ref{fig:knowledge_distillation_results} presents the effect of knowledge
 
 
 Using baseline \texttt{.engine} models and distilled \texttt{.engine} students, the distillation results remain mixed rather than uniformly beneficial. Several YOLO11 students still move rightward relative to their baselines, indicating slower inference, while some YOLO26 students shift slightly leftward and recover a modest runtime gain. Accuracy is also pair-dependent rather than consistently improved: some student--teacher pairings gain mAP$_{50\text{--}95}$, but others lose it, especially for the larger teacher jumps. The figure therefore suggests that distillation should be treated primarily as a training intervention whose value depends strongly on the chosen teacher--student pairing, rather than as a reliable standalone compression method.
+
+\subsection{Best Models}
+
+With an analysis of compression techniques and their effectiveness, the best object and pose models can now be determined.With a target FPS of the system of roughly 20--25, the combined latency target for the object and pitch models is around 40--50 ms. Using system level optimisations such as inference intervals or parallelization, this can likely be increased to around 80 ms. With this in mind, the latency results from the previous sections can be used to identify the strongest individual models that operate within this latency budget while retaining as much of the baseline mAP$_{50\text{--}95}$ as possible. Limiting the search to only object detection models with a latency under $\frac{80}{2}=40$ ms gives the below plot, with the best-performing models labelled. The plot limits mAP$_{50\text{--}95}$ to above 0.8 to focus on the strongest models.
+
+\begin{figure}[H]
+    \centering
+    \caption{Best object detection models under 40 ms latency.}
+    \label{fig:best_object_models}
+    \includegraphics[width=\linewidth]{../Figures/produced_images/best_model_analysis_object.png}
+\end{figure}
+
+As can be seen by Figure \ref{fig:best_object_models}, a clear frotier can be determined. The best performing models with-in the latency budget of 40ms is clearly the FP16 quantised 26s model, with a distilled version, a pruned version, and an INT8 version also performing well. As latency decreases, 11n FP16 also provides a strong option, with a distilled version and pruned version indicating a strong trade-off. Finally, as latency decreases further, the 26s model but with a reduced input resolution of 60\% also provides a strong option, with the pruned version of this model also performing well. It was chosen to not explore models beyond 80\% mAP$_{50\text{--}95}$, as this would likely be too far from the baseline to be useful in the full-stack system. 
+
+With the best object detection models identified, the same process can now be applied to the pose estimation models. This is displayed in Figure \ref{fig:best_pose_models},with again a latency limit of 40ms. For this plot, a limit of 97\% mAP$_{50\text{--}95}$ was used, as drop-off quickly occurs beyond this point without major accuracy imrpovment.
+
+\begin{figure}[H]
+    \centering
+    \caption{Best pose estimation models under 40 ms latency.}
+    \label{fig:best_pose_models}
+    \includegraphics[width=\linewidth]{../Figures/produced_images/best_model_analysis_pose.png}
+\end{figure}
+
+As can be seen by Figure \ref{fig:best_pose_models}, the frontier of pitch keypoint estimation is much less defined. In this case, only 4 models provide optimal latency-accuracy trade-offs, all of which are derivativions of the 26n family. The FP16 quantised 26n model provides the highest accuracy below 40ms, with distilled and pruned versions with reduced input sizes offering faster inference times with slight accuracy loss.
+
+\subsection{Full-Stack System}
+
+With the 9 best performing object models and 3 best peforming keypoint models identified, the full-stack system can be prepared and evaluated, before for accuracy and for hardware efficiency. 
+
+\subsection{Full-Stack System Implementation}
+Figure 
+
+\begin{figure}[H]
+    \centering
+    \caption{Full-stack system parameter screen.}
+    \label{fig:fullstack_parameter_screen_2}
+    \includegraphics[width=\linewidth]{images/Screenshot_2026-04-07_152040.png}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \caption{Full-stack system parameter screen.}
+    \label{fig:fullstack_parameter_screen_1}
+    \includegraphics[width=\linewidth]{images/Screenshot_2026-04-07_164923.png}
+\end{figure}
+
+
+\subsubsection{Full-Stack System Performance}
+These shortlisted models were then evaluated in the proposed full-stack pipeline to analyse higher-level statistic accuracy and compared to the prior SoccerNet system, which achieved a pass mAP$_{1\text{--}5}$ of 71.2\% \cite{tracking}, with mAP$_{1\text{--}5}$ defined earlier. Each model combination was run on a continuous 45 minute football video within the proposed system. Table~\ref{tab:fullstack_rank02_top5} reports the five strongest full-stack configurations, with "$\Delta$mAP$_{1\text{--}5}$ vs. SoccerNet" representing the percent difference in mAP$_{1\text{--}5}$ against the SoccerNet system. The table also reports the difference between predicted and ground-truth possession, together with runtime hardware statistics.
+
+\input{tables/fullstack_rank02_top5}
+As shown in Table~\ref{tab:fullstack_rank02_top5}, all five configurations remained within \textbf{15\%} of the SoccerNet mAP$_{1\text{--}5}$ baseline, indicating that the compressed models and optimised full-stack system can achieve performance close to that of non-real-time systems. This is encouraging, as it shows that competitive pass-detection performance can be retained while operating close to real-time on the Jetson Orin Nano. The strongest overall configuration achieved the smallest gap to the baseline at just \textbf{5.5\%}, with other model combinations also remaining reasonably close to the baseline. 
+
+Table~\ref{tab:fullstack_rank02_hardware_avg} provides the corresponding average hardware profile across all 16 evaluated combinations in the same rank-02 replay batch.
+
+\input{tables/fullstack_rank02_hardware_avg}
+
+Figures~\ref{fig:fullstack_rank02_runtime_tradeoffs} and \ref{fig:fullstack_rank02_thermal_tradeoffs} complement these table summaries by plotting pass mAP$_{1\text{--}5}$ against the main runtime and hardware metrics for all 16 rank-02 full-stack combinations. This makes it easier to see whether stronger analytical performance is tied to substantially higher latency, GPU load, power draw, or temperature.
+
+\begin{figure}[H]
+    \centering
+    \caption{Pass mAP$_{1\text{--}5}$ versus runtime metrics for rank-02 full-stack combinations.}
+    \label{fig:fullstack_rank02_runtime_tradeoffs}
+    \includegraphics[width=\linewidth]{../Figures/produced_images/fullstack_rank02_map1_5_vs_latency_gpu_pair.png}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \caption{Pass mAP$_{1\text{--}5}$ versus thermal and power metrics for rank-02 full-stack combinations.}
+    \label{fig:fullstack_rank02_thermal_tradeoffs}
+    \includegraphics[width=\linewidth]{../Figures/produced_images/fullstack_rank02_map1_5_vs_power_temp_pair.png}
+\end{figure}
+
+Taken together, these figures show that the strongest pass-detection results do not require the highest hardware load within the tested full-stack shortlist. The higher-performing combinations cluster within a fairly narrow operating band, with only moderate variation in GPU usage, power draw, and temperature, while the latency plot shows that the best analytical scores are not confined to the slowest configurations. This reinforces the conclusion from Table~\ref{tab:fullstack_rank02_hardware_avg}: the system operates comfortably within the limits of the NVIDIA Jetson Orin Nano Dev Kit, with power draw far below the 25\,W budget, temperature well under the 85$^\circ$C limit, and GPU utilisation below 55\% in every case. The systems reached effective throughputs of roughly 11--13 FPS, near-real-time. Although this still falls short of strictly real-time (generally considered 20--25 FPS in broadcast video), the remaining gap is small, suggesting that full real-time deployment could likely be achieved through further system-level optimisation, rather than substantial additional model compression.
+
 
 
 \subsection{Hardware Analysis}
@@ -176,35 +251,4 @@ Table \ref{tab:yolo_object_pose_temp_reduction_avg} extends the hardware analysi
 \input{tables/object_pose_temperature}
 
 The temperature results again favour quantisation, which produces the largest and most uniform reductions across both object and pose models. Hardware acceleration helps noticeably for the smaller and mid-sized pose models, but has only limited or even slightly negative impact for the larger object variants, showing that faster execution does not automatically translate into cooler operation. Distillation and pruning have the weakest and least consistent thermal effects, so while they remain useful from an accuracy--efficiency perspective, they are not the primary tools for improving thermal behaviour.
-\subsection{Full-Stack System}
-\subsection{Full-Stack System Implementation}
-\subsubsection{Full-Stack System Performance}
-With individual model compression analysis complete, the Pareto frontier analysis discussed earlier can be implemented. This was used to identify models that offered the strongest balance between analytical performance and hardware efficiency \cite{Mattson2005}. For object detection, the frontier shortlist consisted of four compressed YOLO26 variants: \textbf{26l (FP16)}, \textbf{26s (Baseline)}, \textbf{26m (80\%, FP16)}, and \textbf{26s (FP16)} [See Table~\ref{tab:fullstack_rank02_top5} for an explanation of this labelling]. For keypoint estimation, the frontier was composed entirely of compressed 26n-pose variants: \textbf{26n (FP16)}, \textbf{26n (80\%, FP16)}, \textbf{26n (KD-26x, 80\%, FP16)}, and \textbf{26n (KD-26m, 80\%, INT8)}. 
-
-These shortlisted models were then evaluated in the proposed full-stack pipeline to analyse higher-level statistic accuracy and compared to the prior SoccerNet system, which achieved a pass mAP$_{1\text{--}5}$ of 71.2\% \cite{tracking}, with mAP$_{1\text{--}5}$ defined earlier. Each model combination was run on a continuous 45 minute football video within the proposed system. Table~\ref{tab:fullstack_rank02_top5} reports the five strongest full-stack configurations, with "$\Delta$mAP$_{1\text{--}5}$ vs. SoccerNet" representing the percent difference in mAP$_{1\text{--}5}$ against the SoccerNet system. The table also reports the difference between predicted and ground-truth possession, together with runtime hardware statistics.
-
-\input{tables/fullstack_rank02_top5}
-As shown in Table~\ref{tab:fullstack_rank02_top5}, all five configurations remained within \textbf{15\%} of the SoccerNet mAP$_{1\text{--}5}$ baseline, indicating that the compressed models and optimised full-stack system can achieve performance close to that of non-real-time systems. This is encouraging, as it shows that competitive pass-detection performance can be retained while operating close to real-time on the Jetson Orin Nano. The strongest overall configuration achieved the smallest gap to the baseline at just \textbf{5.5\%}, with other model combinations also remaining reasonably close to the baseline. 
-
-Table~\ref{tab:fullstack_rank02_hardware_avg} provides the corresponding average hardware profile across all 16 evaluated combinations in the same rank-02 replay batch.
-
-\input{tables/fullstack_rank02_hardware_avg}
-
-Figures~\ref{fig:fullstack_rank02_runtime_tradeoffs} and \ref{fig:fullstack_rank02_thermal_tradeoffs} complement these table summaries by plotting pass mAP$_{1\text{--}5}$ against the main runtime and hardware metrics for all 16 rank-02 full-stack combinations. This makes it easier to see whether stronger analytical performance is tied to substantially higher latency, GPU load, power draw, or temperature.
-
-\begin{figure}[H]
-    \centering
-    \caption{Pass mAP$_{1\text{--}5}$ versus runtime metrics for rank-02 full-stack combinations.}
-    \label{fig:fullstack_rank02_runtime_tradeoffs}
-    \includegraphics[width=\linewidth]{../Figures/produced_images/fullstack_rank02_map1_5_vs_latency_gpu_pair.png}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \caption{Pass mAP$_{1\text{--}5}$ versus thermal and power metrics for rank-02 full-stack combinations.}
-    \label{fig:fullstack_rank02_thermal_tradeoffs}
-    \includegraphics[width=\linewidth]{../Figures/produced_images/fullstack_rank02_map1_5_vs_power_temp_pair.png}
-\end{figure}
-
-Taken together, these figures show that the strongest pass-detection results do not require the highest hardware load within the tested full-stack shortlist. The higher-performing combinations cluster within a fairly narrow operating band, with only moderate variation in GPU usage, power draw, and temperature, while the latency plot shows that the best analytical scores are not confined to the slowest configurations. This reinforces the conclusion from Table~\ref{tab:fullstack_rank02_hardware_avg}: the system operates comfortably within the limits of the NVIDIA Jetson Orin Nano Dev Kit, with power draw far below the 25\,W budget, temperature well under the 85$^\circ$C limit, and GPU utilisation below 55\% in every case. The systems reached effective throughputs of roughly 11--13 FPS, near-real-time. Although this still falls short of strictly real-time (generally considered 20--25 FPS in broadcast video), the remaining gap is small, suggesting that full real-time deployment could likely be achieved through further system-level optimisation, rather than substantial additional model compression.
 

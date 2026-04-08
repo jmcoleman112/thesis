@@ -34,12 +34,11 @@ LATENCY_COLUMN = "Latency ms"
 REQUIRED_COLUMNS = ["Model", "Location", MAP_COLUMN, LATENCY_COLUMN]
 CSV_PATH = Path(__file__).resolve().parents[2] / "research" / "model_summaries.csv"
 FIGURE_WIDTH_IN = 7.1
-FIGURE_HEIGHT_IN = 5.9
+FIGURE_HEIGHT_IN = 6.35
 TITLE_FONT_SIZE = 15
 LABEL_FONT_SIZE = 15
 TICK_FONT_SIZE = 12.5
 LEGEND_FONT_SIZE = 12
-ANNOTATION_FONT_SIZE = 13.5
 
 SIZE_ORDER = ["n", "s", "m", "l", "x"]
 PANEL_ORDER = [
@@ -85,17 +84,9 @@ STAGE_STYLES = {
         "marker": "o",
     },
     "fp32": {
-        "label": "FP32",
+        "label": "Hardware Accel",
         "marker": "s",
     },
-}
-
-SIZE_ANNOTATIONS = {
-    "n": {"xytext": (0, -10), "ha": "center", "va": "top"},
-    "s": {"xytext": (6, 5), "ha": "left", "va": "bottom"},
-    "m": {"xytext": (-6, -1), "ha": "right", "va": "center"},
-    "l": {"xytext": (6, -1), "ha": "left", "va": "center"},
-    "x": {"xytext": (-6, 5), "ha": "right", "va": "bottom"},
 }
 
 
@@ -316,25 +307,10 @@ def build_figure(panel_size_values: dict[tuple[str, str], dict[str, dict[str, tu
                     color=size_color,
                     marker=STAGE_STYLES[artifact]["marker"],
                     s=115,
-                    edgecolors="black",
-                    linewidths=0.8,
+                    edgecolors="white",
+                    linewidths=1.0,
                     zorder=3,
                 )
-
-            annotation_style = SIZE_ANNOTATIONS[size]
-            pt_latency, pt_map = panel_size_values[panel][size]["pt"]
-            ax.annotate(
-                SIZE_LABELS[size],
-                xy=(pt_latency, pt_map),
-                xytext=annotation_style["xytext"],
-                textcoords="offset points",
-                ha=annotation_style["ha"],
-                va=annotation_style["va"],
-                fontsize=ANNOTATION_FONT_SIZE,
-                color=size_color,
-                weight="bold",
-                zorder=4,
-            )
 
         ax.set_title(PANEL_TITLES[panel], fontsize=TITLE_FONT_SIZE, pad=8)
         ax.grid(True, color="#d9d9d9", linestyle="--", linewidth=0.7, alpha=0.8)
@@ -354,6 +330,8 @@ def build_figure(panel_size_values: dict[tuple[str, str], dict[str, dict[str, tu
             color="black",
             linestyle="None",
             markersize=7,
+            markeredgecolor="white",
+            markeredgewidth=1.0,
             label=STAGE_STYLES[artifact]["label"],
         )
         for artifact in STAGE_ORDER
@@ -374,18 +352,18 @@ def build_figure(panel_size_values: dict[tuple[str, str], dict[str, dict[str, tu
 
     fig.legend(
         handles=combined_handles,
-        loc="upper center",
-        bbox_to_anchor=(0.5, 0.995),
-        ncol=4,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 0.01),
+        ncol=len(combined_handles),
         frameon=False,
         fontsize=LEGEND_FONT_SIZE,
         handletextpad=0.55,
-        columnspacing=1.1,
+        columnspacing=0.95,
         labelspacing=0.8,
         borderaxespad=0.2,
     )
 
-    fig.tight_layout(rect=[0, 0, 1, 0.89], w_pad=1.1, h_pad=1.6)
+    fig.tight_layout(rect=[0, 0.08, 1, 1], w_pad=1.1, h_pad=1.8)
     return fig
 
 

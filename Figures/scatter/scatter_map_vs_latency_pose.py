@@ -20,8 +20,8 @@ from figure_save_dialog import prompt_save_figure
 
 REQUIRED_COLS = ["Model", "Location", "Latency ms"]
 MAP_COLUMN = "mAP50-95"
-MIN_MAP = 0.76
-MAX_LATENCY_MS = 300.0
+MIN_MAP = 0.95
+MAX_LATENCY_MS = 50.0
 CSV_PATH = Path(__file__).resolve().parents[2] / "research" / "model_summaries.csv"
 FILTER_TOKEN = "/pose/"
 SERIES_FAMILIES = {
@@ -32,7 +32,7 @@ SERIES_FAMILIES = {
 SERIES_MODE = "both"
 IEEE_ONE_COL_WIDTH_IN = 3.5
 IEEE_ONE_COL_HEIGHT_IN = 2.5
-TEMP_LABEL_ORIGINAL_BASELINE = True
+TEMP_LABEL_ORIGINAL_BASELINE = False
 EXCLUDED_POSE_FAMILIES = {"11l", "26m"}
 
 CATEGORY_ORDER = [
