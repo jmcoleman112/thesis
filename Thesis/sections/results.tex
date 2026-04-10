@@ -72,7 +72,7 @@ Figure \ref{fig:hardware_acceleration_results} presents the mAP50-95 versus late
     \centering
     \caption{Hardware acceleration trade-off by architecture and task.}
     \label{fig:hardware_acceleration_results}
-    \includegraphics[width=.9\linewidth]{../Figures/produced_images/map50_95_vs_latency_baseline_pairs.png}
+    \includegraphics[width=.85\linewidth]{../Figures/produced_images/map50_95_vs_latency_baseline_pairs.png}
 \end{figure}
 
 Figure \ref{fig:hardware_acceleration_results} displays that across almmost all model families and sizes, hardware acceleration produces a significant reduction in latency with almost no change in mAP50-95. The points for the accelerated models are consistently shifted leftward relative to their uncompressed baselines, indicating faster inference, while remaining at approximately the same vertical level, indicating preserved accuracy. The exception to this is the smaller models (YOLO11n, YOLO26n, YOLO26n-pose), where little latency drop is found, and a more significant loss in mAP$_{50\text{--}95}$ is observed. This suggests that the smallest models may already be operating close to a hardware limits of the Jetson Orin Nano, and therefore see less benefit from acceleration. Overall, the figure indicates that hardware acceleration is an effective technique for improving inference speed with minimal impact on analytical performance, especially for the larger model scales.
@@ -86,7 +86,7 @@ Figure \ref{fig:input_resolution_reduction_results} shows the effect of reducing
     \centering
     \caption{Input resolution reduction trade-off.}
     \label{fig:input_resolution_reduction_results}
-    \includegraphics[width=.9\linewidth]{../Figures/produced_images/map50_95_vs_latency_input_resolution_panels.png}
+    \includegraphics[width=.85\linewidth]{../Figures/produced_images/map50_95_vs_latency_input_resolution_panels.png}
 \end{figure}
 
 As seen, reducing the input resolution produces a significant reduction in latency for all four model families. The object detection models preserve relatively high mAP$_{50\text{--}95}$ values alongside this latency reduction, especially for the lighter input reductions. By contrast, the pose models, and especially the YOLO26 pose variants, experience substantially larger degradations in accuracy as resolution decreases. The exception to this is the YOLO26n-pose model, which maintains a beneficial trade-off between latency and accuracy as input resolution is reduced. 
@@ -99,7 +99,7 @@ Figure \ref{fig:quantisation_results} shows the average mAP$_{50\text{--}95}$ ve
     \centering
     \caption{Quantisation trade-off.}
     \label{fig:quantisation_results}
-    \includegraphics[width=.9\linewidth]{../Figures/produced_images/map50_95_vs_latency_quant_pairs.png}
+    \includegraphics[width=.85\linewidth]{../Figures/produced_images/map50_95_vs_latency_quant_pairs.png}
 \end{figure}
 
 As can be seen, FP16 quantisation produces a significant reduction in latency with only a small reduction in mAP$_{50\text{--}95}$ for both object and pose models. The INT8 quantisation stage pushes latency even lower, but at a much more significant cost to accuracy, especially for the pose models. This suggests that while quantisation is an effective technique for improving inference speed, the choice of quantisation level is crucial for maintaining analytical performance, with FP16 offering a more balanced trade-off than INT8 for this specific application and hardware context.
@@ -111,7 +111,7 @@ Figure \ref{fig:pruning_results} illustrates the mA$_{50\text{--}95}$ versus lat
     \centering
     \caption{Pruning trade-off.}
     \label{fig:pruning_results}
-    \includegraphics[width=.9\linewidth]{images/map50_95_vs_latency_pruning_pairs_nsmlx.png}
+    \includegraphics[width=.85\linewidth]{images/map50_95_vs_latency_pruning_pairs_nsmlx.png}
 \end{figure}
 
 
@@ -138,10 +138,21 @@ With compression techniques and their effectiveness analysed, the optimal object
     \centering
     \caption{Best object detection models under 40 ms latency.}
     \label{fig:best_object_models}
-    \includegraphics[width=\linewidth]{../Figures/produced_images/best_model_analysis_object.png}
+    \includegraphics[width=.75\linewidth]{../Figures/produced_images/best_model_analysis_object.png}
 \end{figure}
 
 As can be seen by Figure \ref{fig:best_object_models}, a clear frotier can be determined. The best performing models with-in the latency budget of 40ms is clearly the FP16 quantised 26s model, with a distilled version, a pruned version, and an INT8 version also performing well. As latency decreases, 11n FP16 also provides a strong option, with a distilled version and pruned version indicating a strong trade-off. Finally, as latency decreases further, the 26s model but with a reduced input resolution of 60\% also provides a strong option, with the pruned version of this model also performing well. It was chosen to not explore models beyond 80\% mAP$_{50\text{--}95}$, as this would likely be too far from the baseline to be useful in the full-stack system. 
+
+To analyse the behavior of these selected models,Figure \ref{fig:confusion_matrix} shows the normalized confusion matrix for the YOLO26s model at 75\% input resolution and FP16 quantization.
+
+\begin{figure}[H]
+    \centering
+    \caption{Normalized Confusion Matrix of YOLO26s at 75\% Input Resolution and FP16.}
+    \label{fig:confusion_matrix}
+    \includegraphics[width=.8\linewidth]{images/confusion_matrix_normalized.png}
+\end{figure}
+
+As can be seen by Figure \ref{fig:confusion_matrix}, the models performs very well in detecting the goalkeeper, player, and referee, with the biggest source of error being failing to identify the ball (likely due to its small size, fast movement, and frequent occlusion). This represents a key area for future improvement, as the ball is a critical object for accurate pass and possession analysis. Another source of error is the misclassification of background entities as a player or refree, although this is uncommon, only occuring 0.7\% of the time in the case of players, and 3.8\% of the time in the case of referees (which is an unimportant class for high-level analysis). 
 
 With the best object detection models identified, the same process can now be applied to the pose estimation models. This is displayed in Figure \ref{fig:best_pose_models},with again a latency limit of 40ms. For this plot, a limit of 97\% mAP$_{50\text{--}95}$ was used, as drop-off quickly occurs beyond this point without major accuracy imrpovment.
 
@@ -149,7 +160,7 @@ With the best object detection models identified, the same process can now be ap
     \centering
     \caption{Best pose estimation models under 40 ms latency.}
     \label{fig:best_pose_models}
-    \includegraphics[width=\linewidth]{../Figures/produced_images/best_model_analysis_pose.png}
+    \includegraphics[width=.75\linewidth]{../Figures/produced_images/best_model_analysis_pose.png}
 \end{figure}
 
 As can be seen by Figure \ref{fig:best_pose_models}, the frontier of pitch keypoint estimation is much less defined. In this case, only 4 models provide optimal latency-accuracy trade-offs, all of which are derivativions of the 26n family. The FP16 quantised 26n model provides the highest accuracy below 40ms, with distilled and pruned versions with reduced input sizes offering faster inference times with slight accuracy loss.
@@ -165,7 +176,10 @@ Figure \ref{fig:fullstack_parameter_screen_2} shows the parameter screen for the
     \centering
     \caption{Full-stack system parameter screen.}
     \label{fig:fullstack_parameter_screen_2}
-    \includegraphics[width=\linewidth]{images/Screenshot_2026-04-07_152040.png}
+    {\setlength{\fboxsep}{0pt}%
+    \setlength{\fboxrule}{0.8pt}%
+    \fbox{\includegraphics[width=\dimexpr\linewidth-2\fboxrule\relax]{images/Screenshot_2026-04-07_152040.png}}%
+    }
 \end{figure}
 
 Inference begins on upload with the video is treated as a continuous stream, with frames being read in and processed sequentially. The output of the system is a exposed endpoint containing object and keypoint locations (both in on-screen and 2D pitch coordinates), as well as frame-by-frame pass and possession predictions. The system also contains a HTML visualisation endpoint which, if accessed, will display the video with the detected objects and keypoints overlaid, as well as the predicted passes and possessions. This endpoint is displayed below in Figure \ref{fig:fullstack_parameter_screen_1}.
@@ -191,7 +205,7 @@ The most key analysis is the relationship between latency and Pass mAP$_{1\text{
     \centering
     \caption{Pass mAP$_{1\text{--}5}$ versus Latency.}
     \label{fig:sweep_new_map1_5_vs_latency}
-    \includegraphics[width=\linewidth]{../Figures/produced_images/sweep_new_map1_5_vs_latency.png}
+    \includegraphics[width=.75\linewidth]{../Figures/produced_images/sweep_new_map1_5_vs_latency.png}
 \end{figure}
 
 As can be seen by Figure \ref{fig:sweep_new_map1_5_vs_latency}, the best performing model combinations get quite close to the SoccerNetbaseline pass mAP$_{1\text{--}5}$ of 71.2\%. This is a strong result, indicating that the optimised models can achieve near-baseline analytical performance while operating within the latency budget for real-time deployment. At default, these models operate within a latency bound of 80-110 ms, equivalent to around 9-12 FPS, which is below the target of 20-25 FPS. However, with system-level optimisations such as parallelization and inference intervals, it is likely that the effective latency can be reduced further to meet the real-time requirements.
@@ -217,7 +231,7 @@ Figure \ref{fig:sweep_new_map1_5_vs_gpu} shows the GPU usage for the shortlisted
     \centering
     \caption{Pass mAP$_{1\text{--}5}$ versus GPU usage.}
     \label{fig:sweep_new_map1_5_vs_gpu}
-    \includegraphics[width=\linewidth]{../Figures/produced_images/sweep_new_map1_5_vs_gpu.png}
+    \includegraphics[width=.75\linewidth]{../Figures/produced_images/sweep_new_map1_5_vs_gpu.png}
 \end{figure}
 
 As can be seen, each model seems to be operating significantly under the targeted GPU usage of 80\% as defined earlier. This is a strong result, indicating that the optimised models are not only achieving near-baseline analytical performance but are also operating efficiently within the GPU resource constraints. The models used can also be analysed individually. Figure \ref{fig:best_model_analysis_object_pose_gpu} shows the GPU usage for the best-performing object and pose models compared to all other trained models.
@@ -240,14 +254,14 @@ The same analysis can be applied to power usage, with Figure \ref{fig:sweep_new_
     \centering
     \caption{Pass mAP$_{1\text{--}5}$ versus power draw for the shortlisted full-stack sweep combinations.}
     \label{fig:sweep_new_map1_5_vs_power}
-    \includegraphics[width=\linewidth]{../Figures/produced_images/sweep_new_map1_5_vs_power.png}
+    \includegraphics[width=.75\linewidth]{../Figures/produced_images/sweep_new_map1_5_vs_power.png}
 \end{figure}
 
 The shortlisted full-stack combinations also remain comfortably below the power threshold of 15W introduced earlier. As with GPU usage, this indicates that the best full-stack combinations are not relying on excessive hardware draw to approach the SoccerNet benchmark. The individual models can also be examined directly, with Figure \ref{fig:best_model_analysis_object_pose_power} displaying the power draw of the chosen models relative to the wider trained model set.
 
 \begin{figure}[H]
     \centering
-    \caption{Power draw of object and pose models.}
+    \caption{Power Draw Vs. Latency Analysis.}
     \label{fig:best_model_analysis_object_pose_power}
     \includegraphics[width=\linewidth]{../Figures/produced_images/best_model_analysis_object_pose_power.png}
 \end{figure}
@@ -260,16 +274,16 @@ Finally, the relationship between pass mAP$_{1\text{--}5}$ and temperature can b
 
 \begin{figure}[H]
     \centering
-    \caption{Pass mAP$_{1\text{--}5}$ versus temperature for the shortlisted full-stack sweep combinations.}
+    \caption{Pass mAP$_{1\text{--}5}$ versus Temperature Analysis.}
     \label{fig:sweep_new_map1_5_vs_temp}
-    \includegraphics[width=\linewidth]{../Figures/produced_images/sweep_new_map1_5_vs_temp.png}
+    \includegraphics[width=.75\linewidth]{../Figures/produced_images/sweep_new_map1_5_vs_temp.png}
 \end{figure}
 
 As with GPU and power usage, Figure \ref{fig:sweep_new_map1_5_vs_temp} displays that the full stack system operates within acceptable temperature ranges, indicating that further temperature based optimisations will not be needed. Figure \ref{fig:best_model_analysis_object_pose_temp} examines the temperature characteristics of the selected object and pose models in isolation.
 
 \begin{figure}[H]
     \centering
-    \caption{Temperature of object and pose models.}
+    \caption{Temperature Vs. Latency Analysis.}
     \label{fig:best_model_analysis_object_pose_temp}
     \includegraphics[width=\linewidth]{../Figures/produced_images/best_model_analysis_object_pose_temp.png}
 \end{figure}

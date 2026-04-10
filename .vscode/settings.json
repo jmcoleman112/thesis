@@ -1,0 +1,8 @@
+{
+  "editor.links": true,
+  "editor.multiCursorModifier": "alt",
+  "latex-workshop.synctex.afterBuild.enabled": false,
+  "latex-workshop.view.pdf.viewer": "tab",
+  "latex-workshop.view.pdf.scrollMode": 0,
+  "latex-workshop.view.pdf.reload.transition": "none"
+}

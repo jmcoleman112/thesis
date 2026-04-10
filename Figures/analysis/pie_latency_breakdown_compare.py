@@ -2,12 +2,6 @@
 """
 Build a side-by-side latency-breakdown comparison using two timing logs.
 
-Default layout:
-- left: research/piechartdatatwo.txt
-- right: research/piechatdata.txt
-
-An arrow is drawn from the left donut to the right donut.
-
 Run:
   python Figures/analysis/pie_latency_breakdown_compare.py
   python Figures/analysis/pie_latency_breakdown_compare.py --no-show --save-name latency_breakdown_compare
@@ -16,6 +10,7 @@ Run:
 from __future__ import annotations
 
 import argparse
+import math
 import sys
 from pathlib import Path
 
@@ -23,13 +18,20 @@ HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
-from pie_latency_breakdown import FONT_FAMILY, draw_donut, load_component_means, prompt_save_figure, sanitize_filename
+from pie_latency_breakdown import (
+    FONT_FAMILY,
+    load_component_means,
+    prompt_save_figure,
+    sanitize_filename,
+)
 
 LEFT_DATA_PATH = Path(__file__).resolve().parents[2] / "research" / "piechartdatatwo.txt"
 RIGHT_DATA_PATH = Path(__file__).resolve().parents[2] / "research" / "piechatdata.txt"
 OUT_DIR = Path(__file__).resolve().parents[1] / "produced_images"
-FIG_WIDTH_IN = 8.2
-FIG_HEIGHT_IN = 3.8
+
+FIG_WIDTH_IN = 10.8
+FIG_HEIGHT_IN = 4.2
+LABEL_THRESHOLD_PCT = 6.0
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,6 +41,125 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--save-name", help="Save directly to Figures/produced_images without prompting.")
     parser.add_argument("--no-show", action="store_true", help="Do not display the matplotlib window.")
     return parser.parse_args()
+
+
+def draw_donut_clean(
+    ax,
+    components: list[tuple[str, float, str]],
+    total_ms: float,
+    center_text: str,
+    label_offsets: dict[str, tuple[float, float]] | None = None,
+):
+    labels = [name for name, _, _ in components]
+    values = [value for _, value, _ in components]
+    colors = [color for _, _, color in components]
+
+    donut_radius = 1.08
+    label_offsets = label_offsets or {}
+
+    wedges, _ = ax.pie(
+        values,
+        labels=None,
+        colors=colors,
+        startangle=90,
+        counterclock=False,
+        radius=donut_radius,
+        wedgeprops={"width": 0.45, "edgecolor": "white", "linewidth": 1.6},
+    )
+
+    ax.text(
+        0,
+        0,
+        center_text,
+        ha="center",
+        va="center",
+        fontsize=11,
+        fontweight="bold",
+    )
+
+    for wedge, (name, value, color) in zip(wedges, components):
+        pct = 100 * value / total_ms if total_ms else 0.0
+        if pct < LABEL_THRESHOLD_PCT:
+            continue
+
+        theta = 0.5 * (wedge.theta1 + wedge.theta2)
+        theta_rad = math.radians(theta)
+
+        x = donut_radius * math.cos(theta_rad)
+        y = donut_radius * math.sin(theta_rad)
+
+        label_r = 1.32
+        lx = label_r * math.cos(theta_rad)
+        ly = label_r * math.sin(theta_rad)
+
+        dx, dy = label_offsets.get(name, (0.0, 0.0))
+        lx += dx
+        ly += dy
+
+        ha = "left" if lx >= 0 else "right"
+
+        ax.annotate(
+            name,
+            xy=(x, y),
+            xytext=(lx, ly),
+            ha=ha,
+            va="center",
+            fontsize=8.5,
+            fontweight="bold",
+            color=color,
+            arrowprops={
+                "arrowstyle": "-",
+                "color": color,
+                "lw": 1.0,
+                "shrinkA": 0,
+                "shrinkB": 0,
+                "connectionstyle": "arc3,rad=0.15",
+            },
+        )
+
+    ax.set_aspect("equal")
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+
+def add_shared_legend(fig, components: list[tuple[str, float, str]]):
+    import matplotlib.lines as mlines
+
+    filtered_components = [
+        item for item in components
+        if item[0] not in {"Object detection", "Keypoint detection"}
+    ]
+
+    handles = [
+        mlines.Line2D(
+            [],
+            [],
+            linestyle="None",
+            marker="o",
+            markersize=7,  # slightly bigger circles
+            markerfacecolor=color,
+            markeredgecolor=color,
+            label=name,
+        )
+        for name, _, color in filtered_components
+    ]
+
+    legend = fig.legend(
+        handles=handles,
+        labels=[name for name, _, _ in filtered_components],
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.99),
+        ncol=len(filtered_components),
+        frameon=False,
+        fontsize=8.5,
+        handletextpad=0.4,
+        columnspacing=0.9,
+        borderaxespad=0.0,
+    )
+
+    for text, (_, _, color) in zip(legend.get_texts(), filtered_components):
+        text.set_color(color)
+        text.set_fontweight("bold")
 
 
 def build_figure(
@@ -55,30 +176,37 @@ def build_figure(
 
     fig, axes = plt.subplots(1, 2, figsize=(FIG_WIDTH_IN, FIG_HEIGHT_IN), dpi=300)
 
-    draw_donut(
+    draw_donut_clean(
         axes[0],
         left_components,
         left_total_ms,
         center_text=f"Uncompressed:\n{left_total_ms:.1f} ms",
     )
-    draw_donut(
+
+    draw_donut_clean(
         axes[1],
         right_components,
         right_total_ms,
         center_text=f"Compressed:\n{right_total_ms:.1f} ms",
+        label_offsets={
+            "Object model processing": (0.25, 0.06),
+            "Keypoint model processing": (0.27, 0.08),
+        },
     )
+
+    # shared legend using left component order/colors
+    add_shared_legend(fig, left_components)
 
     axes[0].annotate(
         "",
-        xy=(0.59, 0.52),
-        xytext=(0.41, 0.52),
+        xy=(0.54, 0.50),
+        xytext=(0.46, 0.50),
         xycoords=fig.transFigure,
         textcoords=fig.transFigure,
-        arrowprops={"arrowstyle": "->", "linewidth": 1.8, "color": "#444444"},
+        arrowprops={"arrowstyle": "->", "linewidth": 2.4, "color": "#444444"},
     )
 
-    fig.tight_layout(pad=0.15)
-    fig.subplots_adjust(left=0.03, right=0.97, top=0.98, bottom=0.06, wspace=0.35)
+    fig.subplots_adjust(left=0.04, right=0.96, top=0.82, bottom=0.08, wspace=0.28)
     return fig, axes
 
 

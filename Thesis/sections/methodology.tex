@@ -35,6 +35,8 @@ FP16 and INT8 quantisation was implemented through post-training export of train
 
 For INT8 engine generation, calibration data was provided during export to estimate representative activation ranges before deployment \cite{nvidia_modelopt}. Task-specific dataset definitions were used for object detection and pose estimation, with calibration samples drawn from the training split by default and optionally limited by dataset fraction. The resulting TensorRT engines were then evaluated through the same benchmarking and validation pipeline as the other deployed models, allowing their impact on latency, accuracy, and hardware usage to be assessed consistently on the Jetson Orin Nano.
 
+\subsubsection{Input Resolution Scaling}
+Input resolution scaling was also implemented through the post-training export process to TensorRT \texttt{.engine} files \cite{tensorrt}. As model training was standardized at $1280 \times 1280$ px, models were exported at reduced input resolutions of $960 \times 960$ px (a 75\% reduction), $768 \times 768$ px (60\% reduction), and $640 \times 640$ px (50\% reduction). Post-export validation, benchmarking, and full-stack system evalution were performed with the input image resolution pre-scaled to the corresponding size. 
 
 \subsubsection{Pruning}
 Pruning was implemented as structured channel pruning using NVIDIA ModelOpt FastNAS \cite{248452, nvidia_modelopt}. This approach searches for a reduced channel configuration under an explicit FLOP constraint, producing smaller and more efficient network variants while preserving a deployment-compatible architecture. In this work, trained YOLO checkpoints were pruned using target FLOP reductions of 90\%, 80\%, and 70\% where feasible. After this, fine-tune training was applied under the same procedure as the uncompressed models, but for only 100 epochs. Structured pruning was utilised instead of unstructured weight pruning as it produces models that remain more suitable for practical deployment on embedded hardware. By removing entire channels rather than individual weights, the resulting networks preserve dense tensor operations and standard layer structures, which are more easily accelerated by inference frameworks such as TensorRT \cite{nvidia_modelopt}. 
@@ -48,10 +50,34 @@ Two feature-distillation methods were evaluated: Channel-Wise Distillation (CWD)
 \]
 where $\lambda_t$ followed a decaying schedule, with a larger value early in training and a smaller value later. This placed greater emphasis on teacher guidance during the early stages of representation learning, before gradually shifting focus toward the student’s own detection performance.
 
+
+\subsection{Jetson Orin Nano Set-up}
+
+As discussed before, the NVIDIA Jetson Orin Nano was selected as the target edge device for this work \cite{JetsonOrinNano}. The device allows for adjustment of GPU/CPU clock cycles, but also comes with 4 pre-defined power modes. The differences between these two modes are outlined in Table \ref{tab:orin_power_modes_full}. 
+
+\begin{table}[H]
+\centering
+\caption{Available Power Modes Defined \cite{JetsonOrinNano}.}
+\label{tab:orin_power_modes_full}
+\begin{tabular}{ccccc}
+\toprule
+\textbf{Power Limit} & \textbf{CPU cores} & \textbf{CPU MHz} & \textbf{GPU MHz} & \textbf{EMC MHz} \\
+\midrule
+7W          & 4 & 960.0   & 408  & 2133 \\
+15W         & 6 & 1497.6  & 612  & 2133 \\
+25W         & 6 & 1344.0  & 918  & 3199 \\
+\textbf{N/A} & \textbf{6} & \textbf{1728.0} & \textbf{1020} & \textbf{3199} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For the purposes of this work, the uncapped power limit mode (in bold above) was selected for this work, as it allows the GPU, CPU, and external memory controller (EMC) to operate at their maximum clock speeds, The external memory controller manages data transfer from the GPU/CPU to the system RAM. To reduce overhead, the device was also configured to run in headless mode without a graphical user interface, and accessed remotely via SSH.
+
+
 \subsection{Evaluation Metrics and Benchmarking Protocol}
 \label{subsec:evaluation}
 
-Model accuracy was evaluated primarily using the $\mathrm{mAP}_{50\text{--}95}$ metric on a validation subset \cite{Everingham2010}. $\mathrm{mAP}_{50\text{--}95}$ is a standard object detection metric that measures how well predicted objects match the ground truth in both classification and localisation, describing the detection performance averaged across Intersection over Union (IoU) thresholds from 0.50 to 0.95 in steps of 0.05. This makes it a stricter measure than evaluating at a single threshold. It is expressed mathematically as:
+For both object detection and keypoint localisation, model accuracy was evaluated using the $\mathrm{mAP}_{50\text{--}95}$ metric on a validation subset \cite{Everingham2010}. In both cases, $\mathrm{mAP}_{50\text{--}95}$ averages Average Precision (AP) across ten equally spaced thresholds from 0.50 to 0.95 in increments of 0.05, expressed as:
 
 \[
 \mathrm{mAP}_{50\text{--}95}
@@ -59,21 +85,15 @@ Model accuracy was evaluated primarily using the $\mathrm{mAP}_{50\text{--}95}$ 
 \frac{1}{10}\sum_{k=0}^{9} \mathrm{AP}_{0.50 + 0.05k}
 \]
 
-where $\mathrm{AP}_{0.50 + 0.05k}$ denotes the average precision computed at an IoU threshold of $0.50 + 0.05k$. Average precision (AP) is defined as the area under the precision--recall curve, summarising the trade-off between detection precision and recall for a given IoU threshold.
+where $\mathrm{AP}_{0.50 + 0.05k}$ denotes the average precision computed at a threshold of $0.50 + 0.05k$, and AP itself is defined as the area under the precision--recall curve, summarising the trade-off between detection precision and recall at that threshold.
 
-The metric $\mathrm{mAP}_{1\text{--}5}$ was used to analyse pass-detection accuracy, where predictions were matched to ground-truth pass events using temporal tolerances of 1 to 5 seconds rather than spatial IoU thresholds. This allows pass detection performance to be assessed under increasing levels of timing tolerance. Hardware usage was assessed primarily by GPU utilisation, power draw, and device temperature. These metrics were chosen for their relevance to the NVIDIA Jetson Orin Nano, which operates within an 85$^\circ$C thermal limit, a 25\,W power budget, and a constrained 1024-core CUDA GPU, which provides limited compute resources, especially for multiple heavy computer vision workloads run in parallel \cite{JetsonOrinNano}. 
+For object detection, the threshold applied at each step is Intersection over Union (IoU), which quantifies the spatial overlap between a predicted bounding box and its corresponding ground truth box. A higher IoU threshold demands greater precision, making $\mathrm{mAP}_{50\text{--}95}$ a stricter and more comprehensive measure than evaluating at a single threshold such as $\mathrm{mAP}_{50}$  \cite{Everingham2010}.
 
-Hardware usage and inference performance were measured for each model by running inference on the same image set over a 600s run. Each run began with five warm-up inferences, which were excluded from analysis. Latency was recorded for every timed inference, while throughput (FPS) was computed as the total number of successful inferences divided by cumulative inference time. In parallel, system telemetry was sampled every 1000ms using NVIDIA's built-in \verb|tegrastats| command, from which mean CPU utilisation, GPU utilisation, RAM usage, temperature, and power draw were computed.
+For keypoint localisation, IoU is replaced by Object Keypoint Similarity (OKS) as the underlying similarity measure. OKS evaluates the accuracy of predicted keypoint locations by computing the Euclidean distance between each predicted keypoint and the corresponding ground truth, normalised by the scale of the object. As in object detection, OKS thresholds are swept from 0.50 to 0.95, such that higher thresholds penalise even small deviations in predicted keypoint positions \cite{Everingham2010}.
 
-After all models were benchmarked and validated, the efficiency-accuracy trade-off could be analysed. To identify the optimal models in this regard, Pareto analysis was applied in the two-dimensional space, maximising $\mathrm{mAP}_{50\text{--}95}$ while minimising latency \cite{Mattson2005}. A model $i$ was considered Pareto-dominated and dismissed if there existed another model $j$ such that:
-\[
-\mathrm{mAP}_{50\text{--}95}^{(j)} \geq \mathrm{mAP}_{50\text{--}95}^{(i)}
-\quad \text{and} \quad
-\mathrm{LAT}^{(j)} < \mathrm{LAT}^{(i)}
-\]
-The remaining non-dominated models form the Pareto frontier and were used to shortlist best models for full-stack analysis.
+For temporal analysis such as pass-detection, the metric $\mathrm{mAP}_{1\text{--}5}$ was used, where predictions were matched to ground-truth pass events using temporal tolerances of 1 to 5 seconds rather than spatial IoU thresholds. This allows performance to be assessed under increasing levels of timing tolerance. Hardware usage was assessed primarily by GPU utilisation, power draw, and device temperature. These metrics were chosen for their relevance to the NVIDIA Jetson Orin Nano, which recomends within an 85$^\circ$C thermal limit, a 25\,W power budget, and a constrained 1024-core CUDA GPU, which provides limited compute resources, especially for multiple heavy computer vision workloads \cite{JetsonOrinNano}. 
 
-
+Hardware usage and inference performance were measured for each model by running inference on the same image set over a 240s run. Each run began with five warm-up inferences, which were excluded from analysis. Latency was recorded for every timed inference, while throughput (FPS) was computed as the total number of successful inferences divided by cumulative inference time. In parallel, system telemetry was sampled every 1000ms using NVIDIA's built-in \verb|tegrastats| command, from which mean CPU utilisation, GPU utilisation, RAM usage, temperature, and power draw were computed.
 
 
 \subsection{Post-Processing and Higher-level Statistic Generation}
