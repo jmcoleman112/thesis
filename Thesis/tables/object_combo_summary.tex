@@ -1,11 +1,15 @@
 \setcellcolorrange{0}{60}{70}
-\begin{table}[H]
+\begin{figure}[H]
 \footnotesize
 \centering
 \caption{Object combined compression summary.}
-\label{tab:object_combo_summary}
+\label{fig:object_combo_summary}
 \definecolor{rulegray}{gray}{0.88}
-\begin{minipage}{0.33\linewidth}
+\definecolor{colorpruned}{HTML}{d95f02}
+\definecolor{colordistillpruned}{HTML}{7570b3}
+\definecolor{colordistilled}{HTML}{33a02c}
+\definecolor{colorquantized}{HTML}{1f78b4}
+\begin{minipage}{0.30\linewidth}
 \centering
 \setlength{\tabcolsep}{3pt}
 \resizebox{\linewidth}{!}{%
@@ -13,7 +17,7 @@
 \toprule
 \textbf{Combination} & \textbf{$\Delta$mAP} & \textbf{Lat. $\downarrow$} \\
 \midrule
-\multicolumn{3}{l}{\textbf{Pruned And}} \\
+\multicolumn{3}{l}{\textbf{Pruned And}~\textcolor{colorpruned}{\rule[0.5ex]{0.8em}{1.5pt}}} \\
 \hspace{1em}Accelerated & \autocolorcell{-2.8}{-2.8\%} & \autocolorcell{40.5}{40.5\%} \\
 \hspace{1em}960 & \autocolorcell{-5.1}{-5.1\%} & \autocolorcell{42.5}{42.5\%} \\
 \hspace{1em}FP16 & \autocolorcell{-4.4}{-4.4\%} & \autocolorcell{61.6}{61.6\%} \\
@@ -22,14 +26,22 @@
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
 
-\multicolumn{3}{l}{\textbf{Distill+Prune And}} \\
+\multicolumn{3}{l}{\textbf{Distill+Prune And}~\textcolor{colordistillpruned}{\rule[0.5ex]{0.8em}{1.5pt}}} \\
 \hspace{1em}Accelerated & \autocolorcell{-2.2}{-2.2\%} & \autocolorcell{23.1}{23.1\%} \\
 \hspace{1em}FP16 & \autocolorcell{-3.3}{-3.3\%} & \autocolorcell{37.7}{37.7\%} \\
 \hspace{1em}INT8 & \autocolorcell{-8.6}{-8.6\%} & \autocolorcell{37.3}{37.3\%} \\
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
 
-\multicolumn{3}{l}{\textbf{Quantized And}} \\
+\multicolumn{3}{l}{\textbf{Distilled And}~\textcolor{colordistilled}{\rule[0.5ex]{0.8em}{1.5pt}}} \\
+\hspace{1em}Accelerated & \autocolorcell{-0.2}{-0.2\%} & \autocolorcell{34.4}{34.4\%} \\
+\hspace{1em}960 & \autocolorcell{-4.0}{-4.0\%} & \autocolorcell{54.1}{54.1\%} \\
+\hspace{1em}FP16 & \autocolorcell{-1.6}{-1.6\%} & \autocolorcell{66.7}{66.7\%} \\
+\hspace{1em}INT8 & \autocolorcell{-7.7}{-7.7\%} & \autocolorcell{74.5}{74.5\%} \\
+
+\arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
+
+\multicolumn{3}{l}{\textbf{FP16 And}~\textcolor{colorquantized}{\rule[0.5ex]{0.8em}{1.5pt}}} \\
 \hspace{1em}960 & \autocolorcell{-4.0}{-4.0\%} & \autocolorcell{62.4}{62.4\%} \\
 \hspace{1em}768 & \autocolorcell{-10.1}{-10.1\%} & \autocolorcell{72.8}{72.8\%} \\
 \hspace{1em}640 & \autocolorcell{-16.2}{-16.2\%} & \autocolorcell{81.6}{81.6\%} \\
@@ -38,8 +50,8 @@
 }
 \end{minipage}
 \hfill
-\begin{minipage}{0.65\linewidth}
+\begin{minipage}{0.67\linewidth}
 \centering
 \includegraphics[width=\linewidth]{../Figures/produced_images/object_combo_summary_tradeoff.png}
 \end{minipage}
-\end{table}
+\end{figure}

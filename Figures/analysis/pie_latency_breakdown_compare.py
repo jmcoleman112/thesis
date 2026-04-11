@@ -13,6 +13,7 @@ import argparse
 import math
 import sys
 from pathlib import Path
+from matplotlib import patheffects
 
 HERE = Path(__file__).resolve().parent
 if str(HERE) not in sys.path:
@@ -32,6 +33,7 @@ OUT_DIR = Path(__file__).resolve().parents[1] / "produced_images"
 FIG_WIDTH_IN = 10.8
 FIG_HEIGHT_IN = 4.2
 LABEL_THRESHOLD_PCT = 6.0
+INNER_PCT_LABELS = {"Object detection", "Keypoint detection"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -55,6 +57,8 @@ def draw_donut_clean(
     colors = [color for _, _, color in components]
 
     donut_radius = 1.08
+    donut_width = 0.45
+    pct_radius = donut_radius - (donut_width / 2.0)
     label_offsets = label_offsets or {}
 
     wedges, _ = ax.pie(
@@ -106,16 +110,33 @@ def draw_donut_clean(
             va="center",
             fontsize=8.5,
             fontweight="bold",
-            color=color,
-            arrowprops={
-                "arrowstyle": "-",
-                "color": color,
-                "lw": 1.0,
+        color=color,
+        arrowprops={
+            "arrowstyle": "-",
+            "color": color,
+            "lw": 1.0,
                 "shrinkA": 0,
                 "shrinkB": 0,
                 "connectionstyle": "arc3,rad=0.15",
             },
         )
+
+        if name in INNER_PCT_LABELS:
+            pct_x = pct_radius * math.cos(theta_rad)
+            pct_y = pct_radius * math.sin(theta_rad)
+            ax.text(
+                pct_x,
+                pct_y,
+                f"{pct:.1f}%",
+                ha="center",
+                va="center",
+                fontsize=11.5,
+                fontweight="black",
+                color="white",
+            ).set_path_effects([
+                patheffects.Stroke(linewidth=1.1, foreground=(0, 0, 0, 0.28)),
+                patheffects.Normal(),
+            ])
 
     ax.set_aspect("equal")
     ax.set_xticks([])

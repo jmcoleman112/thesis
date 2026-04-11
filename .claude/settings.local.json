@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python Figures/line/line_object_combo_summary_tradeoff.py --no-show)",
+      "Bash(python tmp_compute_distilled.py)",
+      "Bash(python tmp_compute_distilled2.py)",
+      "Bash(python tmp_check_distilled_960.py)",
+      "Bash(rm tmp_check_distilled_960.py)",
+      "Bash(python tmp_d960.py)",
+      "Bash(rm tmp_d960.py)",
+      "Bash(python Figures/line/line_pose_combo_summary_tradeoff.py --no-show)",
+      "Bash(python Figures/line/line_object_technique_summary_tradeoff.py --no-show)",
+      "Bash(python Figures/line/line_pose_technique_summary_tradeoff.py --no-show)"
+    ]
+  }
+}

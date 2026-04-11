@@ -1,10 +1,14 @@
 \setcellcolorrange{0}{60}{70}
-\begin{table}[H]
+\begin{figure}[H]
 \centering
 \caption{Pose base optimisation summary.}
-\label{tab:pose_technique_summary}
+\label{fig:pose_technique_summary}
 \footnotesize
 \definecolor{rulegray}{gray}{0.88}
+\definecolor{colorinput}{HTML}{1f78b4}
+\definecolor{colorquant}{HTML}{33a02c}
+\definecolor{colorpruning}{HTML}{ff7f00}
+\definecolor{colordistill}{HTML}{6a3d9a}
 \begin{minipage}{0.35\linewidth}
 \centering
 \setlength{\tabcolsep}{4pt}
@@ -12,34 +16,34 @@
 \toprule
 \textbf{Technique} & \textbf{$\Delta$mAP} & \textbf{Lat.$\downarrow$} \\
 \midrule
-\textbf{Acceleration} & \autocolorcell{0.0}{0.0\%} & \autocolorcell{35.5}{35.5\%} \\
+\textcolor{black}{$\blacksquare$}~\textbf{Acceleration} & \autocolorcell{0.0}{0.0\%} & \autocolorcell{35.5}{35.5\%} \\
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
 
-\multicolumn{3}{l}{\textbf{Input Scaling and Accel.}} \\
-\hspace{1em}960 & \autocolorcell{-18.2}{-18.2\%} & \autocolorcell{12.5}{12.5\%} \\
-\hspace{1em}768 & \autocolorcell{-28.2}{-28.2\%} & \autocolorcell{45.0}{45.0\%} \\
-\hspace{1em}640 & \autocolorcell{-47.6}{-47.6\%} & \autocolorcell{62.8}{62.8\%} \\
+\multicolumn{3}{l}{\textbf{Input Scaling and Accel.}~\textcolor{colorinput}{\rule[0.5ex]{0.8em}{1.5pt}}} \\
+\hspace{1em}\textcolor{colorinput}{$\blacksquare$}~960 & \autocolorcell{-18.2}{-18.2\%} & \autocolorcell{12.5}{12.5\%} \\
+\hspace{1em}\textcolor{colorinput}{$\blacktriangle$}~768 & \autocolorcell{-28.2}{-28.2\%} & \autocolorcell{45.0}{45.0\%} \\
+\hspace{1em}\textcolor{colorinput}{$\blacklozenge$}~640 & \autocolorcell{-47.6}{-47.6\%} & \autocolorcell{62.8}{62.8\%} \\
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
 
-\multicolumn{3}{l}{\textbf{Quantisation}} \\
-\hspace{1em}FP16 & \autocolorcell{0.1}{0.1\%} & \autocolorcell{43.1}{43.1\%} \\
-\hspace{1em}INT8 & \autocolorcell{-43.8}{-43.8\%} & \autocolorcell{53.0}{53.0\%} \\
+\multicolumn{3}{l}{\textbf{Quantisation}~\textcolor{colorquant}{\rule[0.5ex]{0.8em}{1.5pt}}} \\
+\hspace{1em}\textcolor{colorquant}{$\blacksquare$}~FP16 & \autocolorcell{-0.1}{-0.1\%} & \autocolorcell{43.1}{43.1\%} \\
+\hspace{1em}\textcolor{colorquant}{$\blacktriangle$}~INT8 & \autocolorcell{-43.8}{-43.8\%} & \autocolorcell{53.0}{53.0\%} \\
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
 
-\multicolumn{3}{l}{\textbf{Pruning}} \\
-\hspace{1em}90\% pruning & \autocolorcell{-24.5}{-24.5\%} & \autocolorcell{3.9}{3.9\%} \\
-\hspace{1em}80\% pruning & \autocolorcell{-23.6}{-23.6\%} & \autocolorcell{3.2}{3.2\%} \\
-\hspace{1em}70\% pruning & \autocolorcell{-26.2}{-26.2\%} & \autocolorcell{4.7}{4.7\%} \\
+\multicolumn{3}{l}{\textbf{Pruning}~\textcolor{colorpruning}{\rule[0.5ex]{0.8em}{1.5pt}}} \\
+\hspace{1em}\textcolor{colorpruning}{$\blacksquare$}~90\% pruning & \autocolorcell{-24.5}{-24.5\%} & \autocolorcell{3.9}{3.9\%} \\
+\hspace{1em}\textcolor{colorpruning}{$\blacktriangle$}~80\% pruning & \autocolorcell{-23.6}{-23.6\%} & \autocolorcell{3.2}{3.2\%} \\
+\hspace{1em}\textcolor{colorpruning}{$\blacklozenge$}~70\% pruning & \autocolorcell{-26.2}{-26.2\%} & \autocolorcell{4.7}{4.7\%} \\
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
 
-\multicolumn{3}{l}{\textbf{Distillation}} \\
-\hspace{1em}Small jump & \autocolorcell{-2.2}{-2.2\%} & \autocolorcell{-6.8}{-6.8\%} \\
-\hspace{1em}Medium jump & \autocolorcell{-3.2}{-3.2\%} & \autocolorcell{-5.1}{-5.1\%} \\
-\hspace{1em}Large jump & \autocolorcell{-1.9}{-1.9\%} & \autocolorcell{-4.3}{-4.3\%} \\
+\multicolumn{3}{l}{\textbf{Distillation}~\textcolor{colordistill}{\rule[0.5ex]{0.8em}{1.5pt}}} \\
+\hspace{1em}\textcolor{colordistill}{$\blacksquare$}~Small jump & \autocolorcell{-2.2}{-2.2\%} & \autocolorcell{-6.8}{-6.8\%} \\
+\hspace{1em}\textcolor{colordistill}{$\blacktriangle$}~Medium jump & \autocolorcell{-3.2}{-3.2\%} & \autocolorcell{-5.1}{-5.1\%} \\
+\hspace{1em}\textcolor{colordistill}{$\blacklozenge$}~Large jump & \autocolorcell{-1.9}{-1.9\%} & \autocolorcell{-4.3}{-4.3\%} \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -52,4 +56,4 @@
 \par
 \vspace{3pt}
 \noindent\parbox{\linewidth}{\footnotesize \textit{Note:} Distill Jump sizes defined by gap to teacher: small=1 size up, medium=2 sizes, large=3+ sizes up.}
-\end{table}
+\end{figure}

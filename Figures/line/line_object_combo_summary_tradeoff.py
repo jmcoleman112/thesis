@@ -46,6 +46,7 @@ GROUP_COLORS = {
     "Baseline": "#111111",
     "Quantized": "#1f78b4",
     "Pruned": "#d95f02",
+    "Distilled": "#33a02c",
     "Distilled + Pruned": "#7570b3",
 }
 
@@ -63,6 +64,10 @@ POINT_ORDER = [
     "Distilled + Pruned + Accel.",
     "Distilled + Pruned + FP16",
     "Distilled + Pruned + INT8",
+    "Distilled + Accelerated",
+    "Distilled + 960",
+    "Distilled + FP16",
+    "Distilled + INT8",
 ]
 
 POINT_LABELS = {
@@ -79,6 +84,10 @@ POINT_LABELS = {
     "Distilled + Pruned + Accel.": "Accel.",
     "Distilled + Pruned + FP16": "FP16",
     "Distilled + Pruned + INT8": "INT8",
+    "Distilled + Accelerated": "Accel.",
+    "Distilled + 960": "75%px",
+    "Distilled + FP16": "FP16",
+    "Distilled + INT8": "INT8",
 }
 
 LABEL_OFFSETS = {
@@ -93,8 +102,12 @@ LABEL_OFFSETS = {
     "Pruned + 960 + FP16": (-4, 4),
     "Pruned + INT8": (8, -4),
     "Distilled + Pruned + Accel.": (8, 0),
-    "Distilled + Pruned + FP16": (8, 2),
-    "Distilled + Pruned + INT8": (8, -8),
+    "Distilled + Pruned + FP16": (8, -2),
+    "Distilled + Pruned + INT8": (8, 2),
+    "Distilled + Accelerated": (8, -8),
+    "Distilled + 960": (10, -4),
+    "Distilled + FP16": (8, 2),
+    "Distilled + INT8": (8, -2),
 }
 
 PATHS = [
@@ -102,7 +115,9 @@ PATHS = [
     ["Baseline FP16", "Quantized + 960", "Quantized + 768"],
     ["Baseline engine", "Pruned + Accelerated", "Pruned + 960", "Pruned + 960 + FP16"],
     ["Pruned + Accelerated", "Pruned + FP16", "Pruned + INT8"],
-    ["Baseline engine", "Distilled + Pruned + Accel.", "Distilled + Pruned + FP16", "Distilled + Pruned + INT8"]
+    ["Baseline engine", "Distilled + Pruned + Accel.", "Distilled + Pruned + FP16", "Distilled + Pruned + INT8"],
+    ["Baseline engine", "Distilled + Accelerated", "Distilled + 960"],
+    ["Distilled + Accelerated", "Distilled + FP16", "Distilled + INT8"],
 ]
 
 ROW_FILTERS = {
@@ -147,6 +162,18 @@ ROW_FILTERS = {
     ],
     "Distilled + Pruned + INT8": [
         {"stage": "distilled_pruned_quantized", "artifact": "engine", "quant_mode": "int8"},
+    ],
+    "Distilled + Accelerated": [
+        {"stage": "distilled", "artifact": "engine", "quant_mode": "none"},
+    ],
+    "Distilled + 960": [
+        {"stage": "distilled_input", "artifact": "engine", "quant_mode": "none", "input_stage": "960"},
+    ],
+    "Distilled + FP16": [
+        {"stage": "distilled_quantized", "artifact": "engine", "quant_mode": "fp16"},
+    ],
+    "Distilled + INT8": [
+        {"stage": "distilled_quantized", "artifact": "engine", "quant_mode": "int8"},
     ],
 }
 
@@ -423,6 +450,8 @@ def group_key(label: str) -> str:
         return "Quantized"
     if label.startswith("Distilled + Pruned"):
         return "Distilled + Pruned"
+    if label.startswith("Distilled +"):
+        return "Distilled"
     return "Pruned"
 
 
@@ -459,6 +488,7 @@ def build_figure(points: dict[str, tuple[float, float, int]]):
             zorder=1,
         )
 
+    # Plot all points without labeling every one individually.
     for label in POINT_ORDER:
         latency, map_value, _ = points[label]
         color = GROUP_COLORS[group_key(label)]
@@ -474,8 +504,20 @@ def build_figure(points: dict[str, tuple[float, float, int]]):
             zorder=3,
         )
 
+    # Labels that should still be tied to a single point.
+    individual_labels = [
+        "Uncompressed",         # PT
+        "Quantized + 960",      # 75%px
+        "Quantized + 768",      # 60%px
+        "Pruned + 960 + FP16",  # 75%px+FP16
+    ]
+
+    for label in individual_labels:
+        latency, map_value, _ = points[label]
+        color = GROUP_COLORS[group_key(label)]
         text = POINT_LABELS[label]
         offset = LABEL_OFFSETS[label]
+
         annotation = ax.annotate(
             text,
             xy=(latency, map_value),
@@ -486,9 +528,84 @@ def build_figure(points: dict[str, tuple[float, float, int]]):
             fontsize=6.9,
             color=color,
             weight="bold",
-            zorder=4,
+            zorder=5,
         )
         annotation.set_path_effects([pe.withStroke(linewidth=1.8, foreground="white")])
+
+    # Shared labels with leader lines to all related points.
+    # Move text_xy values if you want to fine-tune placement.
+    shared_label_groups = [
+        {
+            "text": "Accel.",
+            "members": [
+                "Baseline engine",
+                "Pruned + Accelerated",
+                "Distilled + Pruned + Accel.",
+                "Distilled + Accelerated",
+            ],
+            "text_xy": (140, 0.875),
+            "color": "#666666",
+        },
+        {
+            "text": "FP16",
+            "members": [
+                "Baseline FP16",
+                "Pruned + FP16",
+                "Distilled + Pruned + FP16",
+                "Distilled + FP16",
+            ],
+            "text_xy": (50, 0.878),
+            "color": "#666666",
+        },
+        {
+            "text": "INT8",
+            "members": [
+                "Pruned + INT8",
+                "Distilled + Pruned + INT8",
+                "Distilled + INT8",
+            ],
+            "text_xy": (75, 0.81),
+            "color": "#666666",
+        },
+        {
+            "text": "75%px",
+            "members": [
+                "Pruned + 960",
+                "Distilled + 960",
+            ],
+            "text_xy": (112, 0.843),
+            "color": "#666666",
+        },
+    ]
+
+    for group in shared_label_groups:
+        text_x, text_y = group["text_xy"]
+        text = group["text"]
+        color = group["color"]
+
+        shared_text = ax.text(
+            text_x,
+            text_y,
+            text,
+            fontsize=7.0,
+            color=color,
+            weight="bold",
+            ha="center",
+            va="center",
+            zorder=6,
+        )
+        shared_text.set_path_effects([pe.withStroke(linewidth=1.8, foreground="white")])
+
+        for member in group["members"]:
+            px, py, _ = points[member]
+            ax.plot(
+                [text_x, px],
+                [text_y, py],
+                color=color,
+                linewidth=0.7,
+                alpha=0.8,
+                zorder=2,
+            )
 
     x_min = min(all_latencies)
     x_max = max(all_latencies)
@@ -508,6 +625,7 @@ def build_figure(points: dict[str, tuple[float, float, int]]):
         Line2D([0], [0], color=GROUP_COLORS["Baseline"], linewidth=1.6, label="Baseline"),
         Line2D([0], [0], color=GROUP_COLORS["Quantized"], linewidth=1.6, label="Quantized"),
         Line2D([0], [0], color=GROUP_COLORS["Pruned"], linewidth=1.6, label="Pruned"),
+        Line2D([0], [0], color=GROUP_COLORS["Distilled"], linewidth=1.6, label="Distilled"),
         Line2D([0], [0], color=GROUP_COLORS["Distilled + Pruned"], linewidth=1.6, label="Distilled + Pruned"),
     ]
     ax.legend(

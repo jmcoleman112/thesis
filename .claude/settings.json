@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python line_object_technique_summary_tradeoff.py --output ../produced_images/object_technique_summary_tradeoff.png --no-show)",
+      "Bash(python line_pose_technique_summary_tradeoff.py --output ../produced_images/pose_technique_summary_tradeoff.png --no-show)"
+    ]
+  }
+}

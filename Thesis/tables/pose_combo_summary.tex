@@ -1,10 +1,14 @@
 \setcellcolorrange{0}{60}{70}
-\begin{table}[H]
+\begin{figure}[H]
 \footnotesize
 \centering
 \caption{Pose combined compression summary.}
-\label{tab:pose_combo_summary}
+\label{fig:pose_combo_summary}
 \definecolor{rulegray}{gray}{0.88}
+\definecolor{colorpruned}{HTML}{d95f02}
+\definecolor{colordistillpruned}{HTML}{7570b3}
+\definecolor{colordistilled}{HTML}{33a02c}
+\definecolor{colorquantized}{HTML}{1f78b4}
 \begin{minipage}{0.33\linewidth}
 \centering
 \setlength{\tabcolsep}{3pt}
@@ -13,7 +17,7 @@
 \toprule
 \textbf{Combination} & \textbf{$\Delta$mAP} & \textbf{Lat. $\downarrow$} \\
 \midrule
-\multicolumn{3}{l}{\textbf{Pruned And}} \\
+\multicolumn{3}{l}{\textbf{Pruned And}~\textcolor{colorpruned}{\rule[0.5ex]{0.8em}{1.5pt}}} \\
 \hspace{1em}Accelerated & \autocolorcell{-6.2}{-6.2\%} & \autocolorcell{9.0}{9.0\%} \\
 \hspace{1em}960 & \autocolorcell{-6.5}{-6.5\%} & \autocolorcell{37.5}{37.5\%} \\
 \hspace{1em}FP16 & \autocolorcell{-6.2}{-6.2\%} & \autocolorcell{52.2}{52.2\%} \\
@@ -22,13 +26,20 @@
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
 
-\multicolumn{3}{l}{\textbf{Distill+Prune And}} \\
-\hspace{1em}Accelerated & \autocolorcell{-0.1}{-0.1\%} & \autocolorcell{11.1}{11.1\%} \\
+\multicolumn{3}{l}{\textbf{Distill+Prune And}~\textcolor{colordistillpruned}{\rule[0.5ex]{0.8em}{1.5pt}}} \\
+\hspace{1em}Accelerated & \autocolorcell{-0.2}{-0.2\%} & \autocolorcell{44.2}{44.2\%} \\
 \hspace{1em}FP16 & \autocolorcell{-0.3}{-0.3\%} & \autocolorcell{56.4}{56.4\%} \\
 
 \arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
 
-\multicolumn{3}{l}{\textbf{Quantized And}} \\
+\multicolumn{3}{l}{\textbf{Distilled And}~\textcolor{colordistilled}{\rule[0.5ex]{0.8em}{1.5pt}}} \\
+\hspace{1em}Accelerated & \autocolorcell{0.9}{+0.9\%} & \autocolorcell{36.3}{36.3\%} \\
+\hspace{1em}960 & \autocolorcell{3.3}{+3.3\%} & \autocolorcell{57.8}{57.8\%} \\
+\hspace{1em}FP16 & \autocolorcell{1.0}{+1.0\%} & \autocolorcell{68.7}{68.7\%} \\
+
+\arrayrulecolor{rulegray}\specialrule{0.35pt}{0pt}{0pt}\arrayrulecolor{black}
+
+\multicolumn{3}{l}{\textbf{FP16 And}~\textcolor{colorquantized}{\rule[0.5ex]{0.8em}{1.5pt}}} \\
 \hspace{1em}960 & \autocolorcell{-33.1}{-33.1\%} & \autocolorcell{63.6}{63.6\%} \\
 \hspace{1em}768 & \autocolorcell{-46.0}{-46.0\%} & \autocolorcell{73.9}{73.9\%} \\
 \hspace{1em}640 & \autocolorcell{-54.9}{-54.9\%} & \autocolorcell{82.8}{82.8\%} \\
@@ -41,4 +52,4 @@
 \centering
 \includegraphics[width=\linewidth]{../Figures/produced_images/pose_combo_summary_tradeoff.png}
 \end{minipage}
-\end{table}
+\end{figure}

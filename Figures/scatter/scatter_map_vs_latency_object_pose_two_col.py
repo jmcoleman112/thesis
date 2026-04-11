@@ -28,6 +28,8 @@ IEEE_TWO_COL_WIDTH_IN = 7.16
 FIG_HEIGHT_IN = 2.25
 IEEE_SERIF_STACK = ["Times New Roman", "Times", "Nimbus Roman", "DejaVu Serif"]
 
+FIT_DEGREE = 3  # degree of the polynomial line of best fit drawn on each panel
+
 OBJECT_MIN_MAP = 0.10
 POSE_MIN_MAP = 0.76
 POSE_MAX_LATENCY_MS = 300.0
@@ -147,6 +149,7 @@ def _build_pose_rows(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _plot_panel(ax: object, panel_df: pd.DataFrame, *, marker_size: int, panel_label: str) -> list[str]:
+    import numpy as np
     from matplotlib.ticker import FormatStrFormatter
 
     present_keys: list[str] = []
@@ -162,6 +165,15 @@ def _plot_panel(ax: object, panel_df: pd.DataFrame, *, marker_size: int, panel_l
             s=marker_size,
             color=color,
         )
+
+    # Polynomial line of best fit over all points in the panel
+    x_all = panel_df["Latency ms"].to_numpy()
+    y_all = panel_df[MAP_COLUMN].to_numpy()
+    if len(x_all) > FIT_DEGREE:
+        coeffs = np.polyfit(x_all, y_all, FIT_DEGREE)
+        x_fit = np.linspace(x_all.min(), x_all.max(), 300)
+        y_fit = np.polyval(coeffs, x_fit)
+        ax.plot(x_fit, y_fit, color="black", linewidth=0.9, linestyle="--", label="Polynomial fit")
 
     ax.set_xlabel("Latency (ms)", fontsize=7)
     ax.tick_params(axis="both", labelsize=6)
@@ -235,6 +247,9 @@ def main() -> int:
             )
             for key in ordered_present
         ]
+        handles.append(
+            Line2D([0], [0], color="black", linewidth=0.9, linestyle="--", label="Polynomial fit")
+        )
         fig.legend(
             handles=handles,
             frameon=False,

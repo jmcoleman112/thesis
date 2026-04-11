@@ -527,15 +527,15 @@ def build_figure(points: dict[str, tuple[float, float, int]], *, map_label: str)
         latency, map_value, _ = points[label]
         color = GROUP_COLORS[group_key(label)]
         marker = MARKERS[marker_key(label)]
-        size = 64 if label in {"Uncompressed", "Baseline engine"} else 58
+        size = 82 if label in {"Uncompressed", "Baseline engine"} else 74
         ax.scatter(
             latency,
             map_value,
             color=color,
             marker=marker,
             s=size,
-            edgecolors="black",
-            linewidths=0.7,
+            edgecolors="white",
+            linewidths=0.9,
             zorder=3,
         )
 
