@@ -7,53 +7,53 @@ In line with the project aims and background literature review defined above, a 
 \subsection{Model Training Procedure}
 \label{subsec:training}
 
-To support fair comparison, all uncompressed object detection and keypoint detection models were trained under a standard procedure. Training was initialised from COCO-pretrained weights \cite{lin2015microsoftcococommonobjects}, and then fine-tuned on a football-targeted dataset. All models were trained in PyTorch and saved as \verb|.pt| checkpoints prior to compression. Training used an input resolution of $1280 \times 1280$, a batch size of 32, and was conducted on the UCD high-performance cluster \textit{UCDSonic}. Optimisation used stochastic gradient descent with an initial learning rate of 0.01, momentum 0.937, and weight decay $5\times10^{-4}$ \cite{ultralytics_cfg}. Training ran for up to 500 epochs, with a 3-epoch warm-up schedule and early stopping patience of 60 epochs.
+To support fair comparison, all uncompressed object detection and keypoint detection models were trained under a standard procedure. Training was initialised from COCO-pretrained weights \cite{lin2015microsoftcococommonobjects}, and then fine-tuned on a football-targeted dataset. All models were trained in PyTorch and saved as \verb|.pt| checkpoints prior to compression. Training used an input resolution of $1280 \times 1280$, a batch size of 32, and was conducted on the UCD high-performance cluster \textit{UCDSonic}. The $1280 \times 1280$ input resolution size was chosen as that was the default input size of most soccer analysis datasets. Optimisation used stochastic gradient descent with an initial learning rate of 0.01, momentum 0.937, and weight decay $5\times10^{-4}$ \cite{ultralytics_cfg}. Training ran for up to 500 epochs, with a 3-epoch warm-up schedule and early stopping patience of 60 epochs.
 
 An initial benchmarking study was performed to identify the most suitable model family for the remainder of the work, based on analytical performance and hardware usage. A separate preliminary study was then conducted to determine the most suitable dataset for the full object detection study, in which 10 model variants were trained under identical conditions and evaluated across three labelled football broadcast datasets: SoccerNet \cite{tracking}, Roboflow \cite{roboflow_sports_repo}, and Football Analytics \cite{roboflow_football_analytics_gnykk_model1}. For pitch keypoint detection, the Roboflow football field dataset \cite{roboflow_football_field_detection_f07vi_dataset15} was used throughout.
 
 \subsection{Compression}
 
-As discussed in the Literature Review, three chief compression techniques have been explored: quantisation, knowledge distillation, and pruning. Figure \ref{fig:compressionplan} below displays the various combinations of compression techniques applied. 
+As discussed in the Literature Review, five chief compression techniques have been explored, alongside combinations of these techniques: hardware acceleration, quantisation, input resolution scaling, knowledge distillation, pruning. Figure \ref{fig:compressionplan} below displays the various combinations of compression techniques applied. 
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=.7\textwidth]{images/compression.png}
-  \caption{Proposed full-stack system diagram.}
+  \caption{Compression Techniques Applied.}
   \label{fig:compressionplan}
 \end{figure}
 
 
-In total, 11 compression configurations are applied to the baseline uncompressed models. These comprise the four individual techniques—hardware acceleration, quantisation, knowledge distillation, and pruning—together with seven hybrid configurations formed by combining these methods in different ways.
+This structure allows both individual techniques and their combined variants to be evaluated, enabling the relative contribution of each method to be isolated and the degree to which performance gains compound when techniques are stacked to be assessed.
 \subsection{Hardware Acceleration}
-After training in PyTorch, each model checkpoint was exported from its native \texttt{.pt} format to a TensorRT \texttt{.engine} file in FP32 precision to enable hardware-accelerated inference on the NVIDIA Jetson Orin Nano. This export stage was included so that evaluation could be performed using the deployment runtime intended for the target edge device, rather than relying on the original training framework. While FP32 retains full numerical precision, conversion to TensorRT still enables substantial optimisation through techniques such as graph simplification, layer fusion, and improved kernel scheduling. This made FP32 engine export a suitable deployment format for measuring model performance under realistic edge inference conditions while avoiding changes to the underlying numerical representation.
+To implement hardware acceleration without introducing other modifications, each trained PyTorch model was exported to a TensorRT \texttt{.engine} file in its native precision size (FP32) and input resolution (1280×1280 px). Although FP32 retains full numerical precision, the TensorRT export still applies graph-level optimisations including layer fusion, kernel selection, and improved memory scheduling, which reduce inference latency without altering model behaviour. This process is hardware specific and therefore must be performed on the target platform. This also limits the models portability to other hardware.
 
-This approach was used because it reduces inference overhead and improves deployment efficiency on embedded GPU platforms. NVIDIA recommends separating engine building from inference itself: the engine is built and serialized once, then loaded later for repeated inference runs. This avoids repeating the expensive optimization stage each time the application starts and allows TensorRT to exploit hardware-specific optimizations such as reduced-precision execution. A further practical consideration is that .engine files are generally tied to the TensorRT version and hardware platform on which they were created, meaning that engines usually need to be rebuilt if the deployment environment changes significantly.
+As the literature review indicated that hardware acceleration often offers significant improvement in hardware efficiency with no analytical loss, this method was applied to all PyTorch-based \verb|.pt| models when available. This includes uncompressed, pruned, distilled, and resolution-scaled variants, as well as all combinations of these techniques. 
 
 \subsubsection{Quantisation}
 
-FP16 and INT8 quantisation was implemented through post-training export of trained PyTorch checkpoints to TensorRT \texttt{.engine} files, enabling reduced-precision inference on the NVIDIA Jetson Orin Nano. Rather than modifying the model training stage, quantisation was applied at deployment time in order to reduce computational and memory requirements on the target edge device. All exports were performed at a fixed input resolution of 1280×1280 and with ONNX opset 20 to maintain consistency across models \cite{inbook, nvidia_modelopt}. This allowed quantisation to be evaluated as a practical deployment-stage compression technique for improving inference efficiency while preserving acceptable model performance.
+Similar to hardware acceleration, FP16 and INT8 quantisation were implemented through post-training export of trained PyTorch checkpoints to TensorRT \texttt{.engine} files, but with reduced numerical precision applied to weights and activations. Post-training quantisation was used rather than quantisation-aware re-training for two reasons: it ensures a fair comparison by isolating the effect of precision reduction from any changes introduced during additional training, and it avoids the substantial computational cost that re-training the full model inventory at lower precision would have required. As with hardware acceleration, exports were performed at a fixed input resolution of 1280$\times$1280 px. For INT8 engine generation, a calibration dataset drawn from the training split was provided during export to estimate representative activation ranges. Without calibration, the quantised engine has no basis for determining how to map the full FP32 activation distribution into the narrower INT8 range, which can result in significant clipping and accuracy loss \cite{nvidia_modelopt}.
 
-For INT8 engine generation, calibration data was provided during export to estimate representative activation ranges before deployment \cite{nvidia_modelopt}. Task-specific dataset definitions were used for object detection and pose estimation, with calibration samples drawn from the training split by default and optionally limited by dataset fraction. The resulting TensorRT engines were then evaluated through the same benchmarking and validation pipeline as the other deployed models, allowing their impact on latency, accuracy, and hardware usage to be assessed consistently on the Jetson Orin Nano.
+As with hardware acceleration, literature suggests that quantisation (and especially FP16 quantisation) can often be applied with minimal analytical loss and significant latency improvements, and so this method was applied to all PyTorch-based \verb|.pt| models when available, including all pruned, distilled, and resolution-scaled variants, as well as all combinations of these techniques.
 
 \subsubsection{Input Resolution Scaling}
-Input resolution scaling was also implemented through the post-training export process to TensorRT \texttt{.engine} files \cite{tensorrt}. As model training was standardized at $1280 \times 1280$ px, models were exported at reduced input resolutions of $960 \times 960$ px (a 75\% reduction), $768 \times 768$ px (60\% reduction), and $640 \times 640$ px (50\% reduction). Post-export validation, benchmarking, and full-stack system evalution were performed with the input image resolution pre-scaled to the corresponding size. 
+Input resolution scaling was also implemented through the post-training export process to TensorRT \texttt{.engine} files \cite{tensorrt}, maintaining the same native FP32 resolution but reducing the input size of the model. This was chosen rather than re-training models at different resolutions for the same reasons as with quantisation: fairness of comparison and to maintain a sustainable methodology. 
+
+As model training was standardised at $1280 \times 1280$ px, input resolution scales of 75\%, 60\%, and 50\% were chosen. 50\% was selected as many computer vision models are trained at this resolution, and so it is a common default for real-time applications. 75\% and 60\% were then selected to provide a more gradual scaling curve. As mentioned in the literature review (Section \ref{lit:yolo}) that YOLO models require input dimensions to be multiples of 32 due to the stride of the detection head, and so the selected resolutions of $1280 \times 1280$ px, $960 \times 960$ px (75\%), $768 \times 768$ px (60\%), and $640 \times 640$ px (50\%).
 
 \subsubsection{Pruning}
-Pruning was implemented as structured channel pruning using NVIDIA ModelOpt FastNAS \cite{248452, nvidia_modelopt}. This approach searches for a reduced channel configuration under an explicit FLOP constraint, producing smaller and more efficient network variants while preserving a deployment-compatible architecture. In this work, trained YOLO checkpoints were pruned using target FLOP reductions of 90\%, 80\%, and 70\% where feasible. After this, fine-tune training was applied under the same procedure as the uncompressed models, but for only 100 epochs. Structured pruning was utilised instead of unstructured weight pruning as it produces models that remain more suitable for practical deployment on embedded hardware. By removing entire channels rather than individual weights, the resulting networks preserve dense tensor operations and standard layer structures, which are more easily accelerated by inference frameworks such as TensorRT \cite{nvidia_modelopt}. 
+Pruning was implemented as structured channel pruning using NVIDIA ModelOpt FastNAS \cite{248452, nvidia_modelopt}. This approach searches for a reduced channel configuration under an explicit FLOP constraint, producing smaller and more efficient network variants while preserving a deployment-compatible architecture. ITrained YOLO checkpoints were pruned to FLOP retention levels of 90\%, 80\%, and 70\%. This range was selected to span a range of productive rentention levels indicated by literature \cite{10204354}. Following pruning, fine-tune training was applied under the same procedure as the uncompressed models but limited to 100 epochs, which was sufficient to recover most of the accuracy lost during pruning while remaining computationally sustainable and time-reasonable across the full model inventory. Structured pruning was used in preference to unstructured weight pruning as it preserves dense tensor operations and standard layer structures, which are more readily accelerated by inference frameworks such as TensorRT \cite{nvidia_modelopt}. Note that pruning could not be applied to all model variants, as aggressive channel removal in certain architecture and task combinations caused training instability during fine-tuning, likely due to the removal of feature channels critical to localisation.
 
 \subsubsection{Knowledge Distillation}
-Knowledge distillation was implemented as a teacher--student training strategy, in which a smaller YOLO student model was optimised using both the standard detection loss and an additional distillation loss. A larger pretrained YOLO teacher model was kept fixed throughout training, with no gradient updates, and both models processed the same input image at each iteration. Rather than distilling only the final predictions, supervision was applied at intermediate feature levels by matching corresponding stages in the teacher and student backbone and neck. Since these paired feature maps did not always have the same channel dimensions, lightweight alignment layers were used to project the student features into the teacher feature space before the distillation loss was computed. This allowed the student to retain its lightweight architecture while benefiting from the stronger internal representations learned by the teacher.
+Knowledge distillation was implemented as a teacher--student training strategy, in which a smaller YOLO student model was trained using both the standard detection loss and a CWD distillation loss computed against the intermediate feature maps of a larger, fixed teacher model \cite{Kaleem2024ACR}. Lightweight alignment layers were used where teacher and student feature dimensions differed. The distillation loss was weighted by a decaying schedule $\lambda_t$, placing greater emphasis on teacher guidance early in training before shifting focus toward the student's own detection objective.
 
-Two feature-distillation methods were evaluated: Channel-Wise Distillation (CWD) and Masked Generative Distillation (MGD) \cite{Kaleem2024ACR, make5040083}. CWD encourages the student to match the teacher’s channel-wise spatial response patterns, helping it learn more discriminative feature representations. MGD instead applies random masking to the student features and trains a small reconstruction module to recover teacher-like representations, promoting stronger semantic understanding and robustness. The overall training objective was defined as
-\[
-\mathcal{L} = \mathcal{L}_{\mathrm{det}} + \lambda_t \mathcal{L}_{\mathrm{distill}},
-\]
-where $\lambda_t$ followed a decaying schedule, with a larger value early in training and a smaller value later. This placed greater emphasis on teacher guidance during the early stages of representation learning, before gradually shifting focus toward the student’s own detection performance.
+Channel-Wise Distillation (CWD) was used as the feature-level distillation loss \cite{Kaleem2024ACR, make5040083}, which encourages the student to match the teacher's channel-wise spatial response patterns at each paired feature stage, helping the student learn more discriminative internal representations than it would from ground-truth labels alone.
+
+For results analysis, teacher--student pairings were defined by the gap in scale between the two models: a small jump denotes one scale step between student and teacher (e.g. N$\rightarrow$S), a medium jump denotes two steps (e.g. N$\rightarrow$M), and a large jump denotes three or more steps (e.g. N$\rightarrow$L or beyond).
 
 
 \subsection{Jetson Orin Nano Set-up}
 
-As discussed before, the NVIDIA Jetson Orin Nano was selected as the target edge device for this work \cite{JetsonOrinNano}. The device allows for adjustment of GPU/CPU clock cycles, but also comes with 4 pre-defined power modes. The differences between these two modes are outlined in Table \ref{tab:orin_power_modes_full}. 
+As discussed in the literature review and Introduction (Section \ref{tab:edge_devices} and \ref{sec:problem2} respectively), the NVIDIA Jetson Orin Nano is a common choice for real-time computer vision applications, and was selected as the target edge device for this work \cite{JetsonOrinNano}. The device allows for adjustment of GPU/CPU clock cycles, but also comes with 4 pre-defined power modes. The differences between these modes are outlined in Table \ref{tab:orin_power_modes_full}. 
 
 \begin{table}[H]
 \centering
@@ -63,37 +63,36 @@ As discussed before, the NVIDIA Jetson Orin Nano was selected as the target edge
 \toprule
 \textbf{Power Limit} & \textbf{CPU cores} & \textbf{CPU MHz} & \textbf{GPU MHz} & \textbf{EMC MHz} \\
 \midrule
-7W          & 4 & 960.0   & 408  & 2133 \\
-15W         & 6 & 1497.6  & 612  & 2133 \\
-25W         & 6 & 1344.0  & 918  & 3199 \\
-\textbf{N/A} & \textbf{6} & \textbf{1728.0} & \textbf{1020} & \textbf{3199} \\
+7W    & 4 & 960.0  & 408  & 2133 \\
+15W   & 6 & 1497.6 & 612  & 2133 \\
+25W   & 6 & 1344.0 & 918  & 3199 \\
+\rowcolor{yellow!20}
+MAXN$^\dagger$ & 6 & 1728.0 & 1020 & 3199 \\
 \bottomrule
 \end{tabular}
+
+\vspace{0.3em}
+\raggedright
+\footnotesize $^\dagger$ Maximum-performance configuration; does not have a fixed power limit.
 \end{table}
 
-For the purposes of this work, the uncapped power limit mode (in bold above) was selected for this work, as it allows the GPU, CPU, and external memory controller (EMC) to operate at their maximum clock speeds, The external memory controller manages data transfer from the GPU/CPU to the system RAM. To reduce overhead, the device was also configured to run in headless mode without a graphical user interface, and accessed remotely via SSH.
+
+For this work, the MAXN uncapped power limit mode (shaded in yellow) was selected as it allows the GPU, CPU, and external memory controller (EMC) to operate at their maximum clock speeds, which would maximise throughput. The external memory controller manages data transfer from the GPU/CPU to the system RAM. To reduce overhead, the device was also configured to run in headless mode without a graphical user interface, and accessed remotely via SSH. Note that as a trade-off, this configuration will result in higher power draw and temperature, but initial experiments indicated that latency would be the primary bottleneck rather then power/temperature. 
 
 
-\subsection{Evaluation Metrics and Benchmarking Protocol}
-\label{subsec:evaluation}
+\subsubsection{Analytical Performance Metrics}
 
-For both object detection and keypoint localisation, model accuracy was evaluated using the $\mathrm{mAP}_{50\text{--}95}$ metric on a validation subset \cite{Everingham2010}. In both cases, $\mathrm{mAP}_{50\text{--}95}$ averages Average Precision (AP) across ten equally spaced thresholds from 0.50 to 0.95 in increments of 0.05, expressed as:
+For both object detection and keypoint localisation, model accuracy was evaluated using the $\mathrm{mAP}_{50\text{--}95}$ metric on a held-out validation subset \cite{Everingham2010}. This metric averages Average Precision (AP) across ten IoU thresholds from 0.50 to 0.95 in increments of 0.05, making it a stricter and more comprehensive measure than evaluating at a single threshold such as $\mathrm{mAP}_{50}$.
 
-\[
-\mathrm{mAP}_{50\text{--}95}
-=
-\frac{1}{10}\sum_{k=0}^{9} \mathrm{AP}_{0.50 + 0.05k}
-\]
+For object detection, the threshold at each step is Intersection over Union (IoU), which quantifies the spatial overlap between a predicted bounding box and its ground truth. For keypoint localisation, IoU is replaced by Object Keypoint Similarity (OKS), which evaluates predicted keypoint accuracy by computing the Euclidean distance between each predicted and ground truth keypoint, normalised by the scale of the object. Higher OKS thresholds penalise even small deviations in predicted keypoint positions, making $\mathrm{mAP}_{50\text{--}95}$ particularly demanding for precise localisation tasks \cite{Everingham2010}.
 
-where $\mathrm{AP}_{0.50 + 0.05k}$ denotes the average precision computed at a threshold of $0.50 + 0.05k$, and AP itself is defined as the area under the precision--recall curve, summarising the trade-off between detection precision and recall at that threshold.
+For full-stack temporal analysis, the metric $\mathrm{mAP}_{1\text{--}5}$ was used for pass detection, where predictions were matched to ground-truth pass events using temporal tolerances of 1 to 5 seconds rather than spatial thresholds, allowing performance to be assessed under increasing levels of timing leniency.
 
-For object detection, the threshold applied at each step is Intersection over Union (IoU), which quantifies the spatial overlap between a predicted bounding box and its corresponding ground truth box. A higher IoU threshold demands greater precision, making $\mathrm{mAP}_{50\text{--}95}$ a stricter and more comprehensive measure than evaluating at a single threshold such as $\mathrm{mAP}_{50}$  \cite{Everingham2010}.
+\subsubsection{Hardware Benchmarking Protocol}
 
-For keypoint localisation, IoU is replaced by Object Keypoint Similarity (OKS) as the underlying similarity measure. OKS evaluates the accuracy of predicted keypoint locations by computing the Euclidean distance between each predicted keypoint and the corresponding ground truth, normalised by the scale of the object. As in object detection, OKS thresholds are swept from 0.50 to 0.95, such that higher thresholds penalise even small deviations in predicted keypoint positions \cite{Everingham2010}.
+Hardware usage was assessed using GPU utilisation, power draw, and device temperature, chosen for their relevance to the Jetson Orin Nano's constraints of an 85$^\circ$C thermal limit, a 25\,W power budget, and a 1024-core CUDA GPU \cite{JetsonOrinNano}. All telemetry was sampled every 200\,ms using NVIDIA's \verb|tegrastats| command, which internally averages over the preceding 50\,ms at each poll.
 
-For temporal analysis such as pass-detection, the metric $\mathrm{mAP}_{1\text{--}5}$ was used, where predictions were matched to ground-truth pass events using temporal tolerances of 1 to 5 seconds rather than spatial IoU thresholds. This allows performance to be assessed under increasing levels of timing tolerance. Hardware usage was assessed primarily by GPU utilisation, power draw, and device temperature. These metrics were chosen for their relevance to the NVIDIA Jetson Orin Nano, which recomends within an 85$^\circ$C thermal limit, a 25\,W power budget, and a constrained 1024-core CUDA GPU, which provides limited compute resources, especially for multiple heavy computer vision workloads \cite{JetsonOrinNano}. 
-
-Hardware usage and inference performance were measured for each model by running inference on the same image set over a 240s run. Each run began with five warm-up inferences, which were excluded from analysis. Latency was recorded for every timed inference, while throughput (FPS) was computed as the total number of successful inferences divided by cumulative inference time. In parallel, system telemetry was sampled every 1000ms using NVIDIA's built-in \verb|tegrastats| command, from which mean CPU utilisation, GPU utilisation, RAM usage, temperature, and power draw were computed.
+Benchmarking was performed in two complementary formats, each targetting a distinct purpose. For full-stack evaluation, a continuous soccer match video was processed for 600\,s with the complete pipeline active (object detection, keypoint estimation, and post-inference processing).  Note that the visualisation endpoint was disabled to avoid overhead due to video rendering. This format provides a realistic assessment of end-to-end system performance under representative operating conditions, but cannot isolate the contribution of individual model variants from the surrounding pipeline. For individual model evaluation, a fixed image set was processed in a continuous inference loop for 240\,s with five warm-up inferences discarded, ensuring the device remained under sustained load throughout the sampling window. This format enables direct comparison of hardware usage and latency across model variants in isolation, without overhead introduced by the fullstack system.
 
 
 \subsection{Post-Processing and Higher-level Statistic Generation}
@@ -105,9 +104,11 @@ Following model inference, a post-inference pipeline was applied to generate hig
 
 Object detections for players, goalkeepers, referees, and the ball were maintained across frames using the ByteTrack multiple-object tracking (MOT) algorithm \cite{zhang2022bytetrack}. This allowed the system to assign a persistent identity to each detected object over time. ByteTrack was particularly suitable for this task because it does not rely only on high-confidence detections, and instead attempts to recover any unmatched tracks using lower-confidence detections. This helps maintain track continuity during short occlusions, missed detections, or brief drops in detector confidence, which are common in soccer footage due to player overlap, rapid motion, and small object size. A simplified version of the ByteTrack association process is outlined in Algorithm~\ref{alg:bytetrack} below.
 
+  
 \begin{algorithm}[H]
 \caption{Simplified ByteTrack association process \cite{zhang2022bytetrack}}
 \label{alg:bytetrack}
+
 \begin{algorithmic}[1]
 \Require tracks, detections
 \State pred\_tracks = predict\_tracks(tracks)
@@ -132,11 +133,9 @@ Object detections for players, goalkeepers, referees, and the ball were maintain
 \end{algorithmic}
 \end{algorithm}
 
-The availability of these player and ball identities across frames was essential for all later stages of the system, particularly team assignment, possession tracking, pass detection, and player speed estimation. 
-
 \subsubsection{Homography Estimation}
 
-To recover 2d coordinate information of the desired objects, the output of pitch keypoint models were matched to a predefined top-down pitch template. A homography mapping image coordinates to canonical pitch coordinates was then estimated using RANSAC \cite{ransac}, which provided robustness to missing or incorrectly localised keypoints. (smoothed over time to reduce noise from poor/failed inferences). For player and goalkeeper detections, the bottom-centre point of the bounding box was used as the projected location, as this point most closely approximates foot placement on the playing surface. For the ball, the bounding-box centre was used. 
+To map detected objects from image coordinates to real-world pitch coordinates, the pitch keypoint model outputs were matched to a predefined top-down pitch template based on standard FIFA pitch dimensions. A homography matrix mapping image coordinates to canonical pitch coordinates was then estimated using RANSAC \cite{ransac}, providing robustness to missing or incorrectly localised keypoints. The estimated homography was smoothed over time to reduce noise from failed or low-confidence inferences, with the previous valid estimate retained when RANSAC failed to find a stable solution. For player and goalkeeper detections, the bottom-centre point of the bounding box was projected, as this most closely approximates foot placement on the playing surface. For the ball, the bounding-box centre was used.
 
 \subsubsection{Player and Goalkeeper Team Assignment}
 
@@ -150,7 +149,6 @@ Passes could then be recorded when possession changed from one player to a diffe
 
 Player speed was estimated from consecutive 2D pitch positions. For each player, distance moved between frames was converted from pitch pixels to metres and smoothed to give distance travelled and speed.
 \subsection{Full-Stack System Overview}
-\label{subsec:system_overview}
 
 \label{subsec:postprocessing}
 \begin{figure}[H]
