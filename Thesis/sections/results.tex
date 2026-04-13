@@ -173,7 +173,7 @@ To display the behaviour of the candidates, Figure \ref{fig:confusion_matrix} pr
     \includegraphics[width=.75\linewidth]{images/confusion_matrix_normalized.png}
 \end{figure}
 
-As shown in Figure \ref{fig:confusion_matrix}, the models achieves near-perfect classification accuracy for the goalkeeper, player, and referee classes. The primary source of error is ball detection, where 13\% of ball instances are missed entirely, likely attributable to the ball's small size, fast motion, and frequent occlusion in broadcast footage. This indicates a clear area for future improvement, as accurate ball localisation is critical for downstream pass and possession analysis. A secondary source of error is the misclassification of background entities as players (0.7\%) or referees (3.8\%), although referee misclassification is unimportant given that the referee class is not a primary input to high-level tactical analysis.
+As shown in Figure \ref{fig:confusion_matrix}, the models achieves near-perfect classification accuracy for the goalkeeper, player, and referee classes. The primary source of error is ball detection, where 13\% of ball instances are missed entirely, likely attributable to the ball's small size, fast motion, and frequent occlusion in broadcast footage. This indicates a clear area for future improvement, as accurate ball localisation is critical for downstream pass and possession analysis. A secondary source of error is the misclassification of background entities as players or referees, although referee misclassification is unimportant given that the referee class is not a primary input to high-level tactical analysis.
 
 With the best object detection models identified, the same selection process is applied to the pose estimation models. Figure \ref{fig:best_pose_models} presents the equivalent filtered plot for pitch keypoint models, again with a 40 ms latency ceiling. 
 
@@ -242,7 +242,7 @@ With end-to-end latency characterised, the relationship between pass mAP$_{1\tex
 
 \subsubsection{Hardware Resource Utilisation}
 
-Beyond latency, the shortlisted full-stack combinations were evaluated against the GPU usage, power draw, and thermal constraints defined earlier (80\%, 15 W, and 75°C respectively). Figure \ref{fig:sweep_new_map1_5_hardware_grid} presents the pass mAP$_{1\text{--}5}$ against each of these metrics for the shortlisted combinations.
+Beyond latency, the shortlisted full-stack combinations were evaluated against the GPU usage, power draw, and thermal constraints defined earlier (80\%, 20 W, and 68°C respectively). Figure \ref{fig:sweep_new_map1_5_hardware_grid} presents the pass mAP$_{1\text{--}5}$ against each of these metrics for the shortlisted combinations.
 
 \begin{figure}[H]
     \centering
@@ -251,7 +251,7 @@ Beyond latency, the shortlisted full-stack combinations were evaluated against t
     \includegraphics[width=.85\linewidth]{../Figures/produced_images/sweep_new_map1_5_hardware_grid.png}
 \end{figure}
 
-As can be seen, the selected combinations operate comfortably within the defined thresholds across all three metrics. GPU utilisation ranges from approximately 40--55\%, power draw from 2--5 W, and device temperature from 48--56°C --- all substantially below the respective limits of 80\%, 15 W, and 75°C as defined in the problem aims. However, it is important to note that the hardware metrics reported here my be slightly inaccurate. The \verb|tegrastats| utility polls hardware counters at 200 ms intervals, meaning that short-duration spikes in GPU utilisation or power draw occurring between polling events will not be captured. Given the erratic and inconsistent nature of the full-stack pipeline i nwhcih model inference is not happening continously, instantaneous peak values may exceed the averages reported here. To counteract this, The individual model behaviour during continuous inference without other processes running has also been benchmarked. The GPU, power draw, and temperature used during 2 minutes of constant inference for object models is  in Figure \ref{fig:best_model_analysis_object_hardware_grid}.
+As can be seen, the selected combinations operate comfortably within the defined thresholds across all three metrics. GPU utilisation ranges from approximately 40--55\%, power draw from 2--5 W, and device temperature from 48--56°C --- all substantially below the respective limits of 80\%, 20 W, and 68°C as defined in the problem aims. However, it is important to note that the hardware metrics reported here my be slightly inaccurate. The \verb|tegrastats| utility polls hardware counters at 200 ms intervals, meaning that short-duration spikes in GPU utilisation or power draw occurring between polling events will not be captured. Given the erratic and inconsistent nature of the full-stack pipeline i nwhcih model inference is not happening continously, instantaneous peak values may exceed the averages reported here. To counteract this, The individual model behaviour during continuous inference without other processes running has also been benchmarked. The GPU, power draw, and temperature used during 2 minutes of constant inference for object models is  in Figure \ref{fig:best_model_analysis_object_hardware_grid}.
 
 \begin{figure}[H]
     \centering

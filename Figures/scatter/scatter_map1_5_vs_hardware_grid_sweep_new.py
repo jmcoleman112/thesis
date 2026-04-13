@@ -53,9 +53,9 @@ PANELS = [
         "title": "Power Draw",
         "x_tick_fmt": "%.1f",
         "x_min_pad": 0.2,
-        "x_reference_value": 15.0,
-        "x_reference_label": "Limit: 15 W",
-        "x_axis_max": 20.0,
+        "x_reference_value": 20.0,
+        "x_reference_label": "Limit: 20 W",
+        "x_axis_max": 25.0,
     },
     {
         "key": "temp",
@@ -64,8 +64,8 @@ PANELS = [
         "title": "Temperature",
         "x_tick_fmt": "%.1f",
         "x_min_pad": 0.2,
-        "x_reference_value": 75.0,
-        "x_reference_label": "Limit: 75 C",
+        "x_reference_value": 68.0,
+        "x_reference_label": "Limit: 68 C",
         "x_axis_max": 80.0,
     },
 ]

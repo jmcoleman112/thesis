@@ -81,9 +81,9 @@ PANELS = [
         "tick_fmt": "%.1f",
         "pad_fraction": 0.08,
         "min_pad": 0.15,
-        "x_reference_value": 15.0,
-        "x_reference_label": "Limit: 15 W",
-        "x_axis_max": 20.0,
+        "x_reference_value": 20.0,
+        "x_reference_label": "Limit: 20 W",
+        "x_axis_max": 25.0,
     },
     {
         "key": "temp",
@@ -93,8 +93,8 @@ PANELS = [
         "tick_fmt": "%.0f",
         "pad_fraction": 0.08,
         "min_pad": 0.25,
-        "x_reference_value": 75.0,
-        "x_reference_label": "Limit: 75 C",
+        "x_reference_value": 68.0,
+        "x_reference_label": "Limit: 68 C",
         "x_axis_max": 80.0,
     },
 ]
