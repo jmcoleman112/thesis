@@ -1,6 +1,34 @@
 % !TeX root = ../main.tex
 \appendix
 \section{Appendices}
+\subsection{AI Use Appendix}
+
+\newcommand{\promptslot}[1]{\textcolor{red!70!black}{\ensuremath{<}}\textcolor{red!70!black}{#1}\textcolor{red!70!black}{\ensuremath{>}}}
+
+In line with the Thesis project handbook, a summary of the use of AI tools in this project is provided below. In general, AI was only used in ways that are indicated as ``allowed with disclosure'' in the handbook. This includes spellchecking/grammar checking, proofreading for clarity, debugging support, and \verb|matplotlib| plot generation support. The only tool used in the preparation of this thesis was ChatGPT Pro Tier, only used via the browser web interface. Some examples of the use of AI include:
+\vspace{2em}
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\arrayrulecolor{gray}
+\begin{tabularx}{0.95\linewidth}{X}
+\promptslot{Written Sentence By Me} Is there any spelling or grammar mistakes in this? \\[1em]
+\hline
+\promptslot{2 Written Sentences By Me} I think this sentence is quite unclear in how it describes the key point. Which part of it is unclear? \\[1em]
+\hline
+\promptslot{Long Error Message} I get this error message when I try to run my code. This is the snippet of code that produces the error. \promptslot{10 Lines of Code Written By Me} What could be the cause of the error? \\[1em]
+\hline
+\promptslot{Plotting Code Written By Me} This is my code to generate a graph of my data. Can you change the line width to double the size, and change the x-axis font to Times New Roman? \\
+\end{tabularx}
+\arrayrulecolor{black}
+\end{center}
+
+
+
+\vspace{2em}
+
+As can be seen, this use of AI was limited entirely to literature support, grammar/spell checks, and debugging/plot assistance of small snippets. 
+
+\newpage
 \subsection{Model Summary CSV}
 \label{app:model_summary_csv}
 

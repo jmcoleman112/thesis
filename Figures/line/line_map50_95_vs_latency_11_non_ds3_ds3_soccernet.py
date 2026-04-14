@@ -42,38 +42,40 @@ FAMILY_INDEX = {f: i for i, f in enumerate(FAMILY_ORDER)}
 ARTIFACT_PREFERENCE = "pt"
 IEEE_SINGLE_COLUMN_WIDTH_IN = 3.5  # 88.9 mm (IEEE single-column width)
 FIG_WIDTH_IN = IEEE_SINGLE_COLUMN_WIDTH_IN
-FIG_HEIGHT_IN = 2.38
+FIG_HEIGHT_IN = 2.52
 IEEE_SERIF_STACK = ["Times New Roman", "Times", "Nimbus Roman", "DejaVu Serif"]
-PLOT_LINE_WIDTH = 0.95
-MARKER_SIZE = 4
-MARKER_EDGE_WIDTH = 0.6
-AXIS_BOX_LINE_WIDTH = 0.7
-AXIS_LABEL_FONT_SIZE = 7
-TICK_FONT_SIZE = 6
-LEGEND_FONT_SIZE = 6
-POINT_LABEL_FONT_SIZE = 6.0
+PLOT_LINE_WIDTH = 1.2
+MARKER_SIZE = 9.2
+MARKER_EDGE_WIDTH = 1.2
+AXIS_BOX_LINE_WIDTH = 0.8
+AXIS_LABEL_FONT_SIZE = 16
+TICK_FONT_SIZE = 13
+LEGEND_FONT_SIZE = 13
+POINT_LABEL_FONT_SIZE = 12.0
 POINT_LABEL_COLOR = "#111111"
-POINT_LABEL_MAP_Y = 0.75
-VERTICAL_GUIDE_LINE_WIDTH = 0.55
+POINT_LABEL_MAP_Y = 0.745
+VERTICAL_GUIDE_LINE_WIDTH = 0.6
 VERTICAL_GUIDE_ALPHA = 0.9
-LEGEND_Y_ANCHOR = -0.24
-LAYOUT_LEFT = 0.145
+LAYOUT_LEFT = 0.155
 LAYOUT_RIGHT = 0.995
 LAYOUT_TOP = 0.992
-LAYOUT_BOTTOM = 0.19
+LAYOUT_BOTTOM = 0.285
 TIGHT_LAYOUT_PAD = 0.06
-LATENCY_X_MIN = 40
-LATENCY_X_MAX = 450
-LATENCY_X_TICKS = [50, 100, 150, 200, 250, 300, 350, 400, 450]
+LATENCY_X_MIN = 35
+LATENCY_X_MAX = 470
+LATENCY_X_TICKS = [50, 150, 250, 350, 450]
 SERIES_COLORS = {
-    "Roboflow": "#0072B2",
-    "Football Analytics": "#D55E00",
-    "Soccernet": "#009E73",
+    "Roboflow": "#0077CC",
+    "Football Analytics": "#E66100",
+    "Soccernet": "#00A87E",
 }
 
-# Fill these once you have SoccerNet best-epoch mAP50-95 for 11l / 11x.
+# Fill these once you have SoccerNet best-epoch mAP50-95 values.
 SOCCERNET_MANUAL_MAP50_95 = {
-    "11l": .54,  # Example: 0.9123
+    "11n": .49,
+    "11s": .50,
+    "11m": .52,
+    "11l": .54,
     "11x": .54,  # Example: 0.9250
 }
 
@@ -197,7 +199,12 @@ def _build_soccernet_rows(non_ds3_rows: pd.DataFrame, ds3_rows: pd.DataFrame) ->
         if latency is None:
             continue
 
-        if family in {"11n", "11s", "11m"}:
+        manual_override = SOCCERNET_MANUAL_MAP50_95.get(family)
+        if manual_override is not None:
+            best_map = float(manual_override)
+            best_epoch = None
+            source = "manual"
+        elif family in {"11n", "11s", "11m"}:
             best_map, best_epoch = _load_best_soccernet_map(family)
             source = "csv"
         else:
@@ -263,6 +270,8 @@ def _add_model_labels(ax: object, labeled_df: pd.DataFrame) -> None:
     if labeled_df.empty:
         return
 
+    import matplotlib.patheffects as pe
+
     line_df = labeled_df.sort_values("family_order")
 
     y_min, y_max = ax.get_ylim()
@@ -299,7 +308,7 @@ def _add_model_labels(ax: object, labeled_df: pd.DataFrame) -> None:
                 alpha=VERTICAL_GUIDE_ALPHA,
                 zorder=0,
             )
-        ax.text(
+        text = ax.text(
             latency,
             POINT_LABEL_MAP_Y,
             _short_model_label(row[MODEL_COLUMN]),
@@ -307,7 +316,9 @@ def _add_model_labels(ax: object, labeled_df: pd.DataFrame) -> None:
             color=POINT_LABEL_COLOR,
             va="center",
             ha="center",
+            zorder=5,
         )
+        text.set_path_effects([pe.withStroke(linewidth=2.2, foreground="white")])
 
 
 def _plot_lines(non_ds3: pd.DataFrame, ds3: pd.DataFrame, sn: pd.DataFrame) -> tuple[object, object]:
@@ -334,9 +345,12 @@ def _plot_lines(non_ds3: pd.DataFrame, ds3: pd.DataFrame, sn: pd.DataFrame) -> t
             marker="o",
             linewidth=PLOT_LINE_WIDTH,
             markersize=MARKER_SIZE,
+            markerfacecolor=color,
+            markeredgecolor="white",
             markeredgewidth=MARKER_EDGE_WIDTH,
             color=color,
             label=label,
+            zorder=3,
         )
 
     ax.set_xlabel("Latency ms", fontsize=AXIS_LABEL_FONT_SIZE, labelpad=2)
@@ -344,24 +358,32 @@ def _plot_lines(non_ds3: pd.DataFrame, ds3: pd.DataFrame, sn: pd.DataFrame) -> t
     ax.tick_params(axis="both", labelsize=TICK_FONT_SIZE, width=AXIS_BOX_LINE_WIDTH)
     ax.set_xlim(LATENCY_X_MIN, LATENCY_X_MAX)
     ax.set_xticks(LATENCY_X_TICKS)
+    ax.set_ylim(0.34, 0.95)
     for spine in ax.spines.values():
         spine.set_linewidth(AXIS_BOX_LINE_WIDTH)
-    ax.grid(True, linestyle="--", alpha=0.4)
+    ax.grid(True, linestyle="--", alpha=0.35)
     _add_model_labels(ax, ds3)
     handles, labels = ax.get_legend_handles_labels()
     handle_by_label = dict(zip(labels, handles))
     legend_order = [label for label in ("Roboflow", "Football Analytics", "Soccernet") if label in handle_by_label]
     if legend_order:
+        legend_display = {
+            "Roboflow": "Roboflow",
+            "Football Analytics": "F.A.",
+            "Soccernet": "Soccernet",
+        }
         ax.legend(
             [handle_by_label[label] for label in legend_order],
-            legend_order,
+            [legend_display[label] for label in legend_order],
             frameon=False,
             fontsize=LEGEND_FONT_SIZE,
-            loc="lower right",
-            # bbox_to_anchor=(0.5, LEGEND_Y_ANCHOR),
-            ncol=len(legend_order),
-            columnspacing=0.9,
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.26),
+            ncol=3,
+            columnspacing=0.8,
             handlelength=1.5,
+            handletextpad=0.45,
+            borderaxespad=0.2,
         )
 
     fig.tight_layout(pad=TIGHT_LAYOUT_PAD)

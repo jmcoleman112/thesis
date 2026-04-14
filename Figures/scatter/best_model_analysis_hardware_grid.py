@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """
-Three-panel hardware scatter grid for shortlisted object or pose models.
+Four-panel latency and hardware scatter grid for shortlisted object or pose models.
 
 Layout:
-  - Top row: GPU usage and power draw
-  - Bottom row: temperature centered at the same width
+  - Top row: latency and GPU usage
+  - Bottom row: power draw and temperature
 
 Run:
   python Figures/scatter/best_model_analysis_hardware_grid.py --task object
@@ -28,18 +28,17 @@ OUT_DIR = Path(__file__).resolve().parents[1] / "produced_images"
 
 FONT_FAMILY = "Times New Roman"
 FIG_WIDTH_IN = 6.8
-FIG_HEIGHT_IN = 6.9
+FIG_HEIGHT_IN = 6.7
 
 MAP_COLUMN = "mAP50-95"
+LATENCY_COLUMN = "Latency ms"
+POSE_DISPLAY_MAP_MIN = 0.60
 BASE_POINT_COLOR = "#9a9a9a"
 BASE_POINT_SIZE = 20
 HIGHLIGHT_POINT_SIZE = 74
 
 OBJECT_HIGHLIGHT_COLOR = "#d95f02"
 POSE_HIGHLIGHT_COLOR = "#1b9e77"
-
-OBJECT_MIN_MAP = 0.70
-POSE_MIN_MAP = 0.97
 
 OBJECT_HIGHLIGHT_MODELS = [
     "26s_DS3_p90_768_fp16.engine",
@@ -61,6 +60,18 @@ POSE_HIGHLIGHT_MODELS = [
 ]
 
 PANELS = [
+    {
+        "key": "latency",
+        "column": LATENCY_COLUMN,
+        "label": "Latency (ms)",
+        "title": "Latency",
+        "tick_fmt": "%.0f",
+        "pad_fraction": 0.08,
+        "min_pad": 1.0,
+        "x_reference_value": 40.0,
+        "x_reference_label": "Ceiling: 40 ms",
+        "x_axis_hard_max": 60.0,
+    },
     {
         "key": "gpu",
         "column": "GPU Util %",
@@ -134,10 +145,8 @@ def _is_object_ds3(model: object, location: object) -> bool:
 def _prepare_subset(df: pd.DataFrame, *, task: str) -> pd.DataFrame:
     if task == "object":
         mask = df.apply(lambda row: _is_object_ds3(row["Model"], row["Location"]), axis=1)
-        min_map = OBJECT_MIN_MAP
     else:
         mask = df["Location"].apply(lambda value: "/pose/" in _normalize_location(value))
-        min_map = POSE_MIN_MAP
 
     subset = df[mask].copy()
     subset[MAP_COLUMN] = pd.to_numeric(subset[MAP_COLUMN], errors="coerce")
@@ -145,9 +154,8 @@ def _prepare_subset(df: pd.DataFrame, *, task: str) -> pd.DataFrame:
         subset[panel["column"]] = pd.to_numeric(subset[panel["column"]], errors="coerce")
 
     subset = subset.dropna(subset=[MAP_COLUMN] + [panel["column"] for panel in PANELS]).copy()
-    subset = subset[subset[MAP_COLUMN] >= min_map].copy()
     if subset.empty:
-        raise ValueError("No rows remain after numeric conversion and mAP filtering.")
+        raise ValueError("No rows remain after numeric conversion.")
     return subset
 
 
@@ -174,6 +182,8 @@ def _compute_map_limits(values: pd.Series, *, task: str) -> tuple[float, float]:
     pad = span * pad_fraction if span > 0 else step
     lower = max(0.0, math.floor((lower - pad) / step) * step)
     upper = min(1.0, math.ceil((upper + pad) / step) * step)
+    if task == "pose":
+        lower = max(lower, POSE_DISPLAY_MAP_MIN)
     if upper <= lower:
         upper = min(1.0, lower + step)
     return lower, upper
@@ -219,7 +229,16 @@ def _plot_panel(ax: object, usable: pd.DataFrame, *, task: str, panel: dict[str,
     from matplotlib.ticker import FormatStrFormatter, PercentFormatter
 
     highlight_models, highlight_color, _ = _highlight_config(task)
-    highlight = usable[usable["Model"].isin(highlight_models)].copy()
+    x_col = str(panel["column"])
+
+    plot_df = usable.copy()
+    x_axis_hard_max = panel.get("x_axis_hard_max")
+    if x_axis_hard_max is not None:
+        plot_df = plot_df[plot_df[x_col] <= float(x_axis_hard_max)].copy()
+        if plot_df.empty:
+            plot_df = usable.copy()
+
+    highlight = plot_df[plot_df["Model"].isin(highlight_models)].copy()
 
     missing_highlights = [model for model in highlight_models if model not in set(highlight["Model"])]
     if missing_highlights:
@@ -227,10 +246,9 @@ def _plot_panel(ax: object, usable: pd.DataFrame, *, task: str, panel: dict[str,
         for model in missing_highlights:
             print(f"  - {model}")
 
-    x_col = str(panel["column"])
     ax.scatter(
-        usable[x_col],
-        usable[MAP_COLUMN],
+        plot_df[x_col],
+        plot_df[MAP_COLUMN],
         alpha=0.65,
         s=BASE_POINT_SIZE,
         color=BASE_POINT_COLOR,
@@ -249,13 +267,15 @@ def _plot_panel(ax: object, usable: pd.DataFrame, *, task: str, panel: dict[str,
     )
 
     x_min, x_max = _compute_axis_limits(
-        usable[x_col],
+        plot_df[x_col],
         pad_fraction=float(panel["pad_fraction"]),
         min_pad=float(panel["min_pad"]),
     )
     x_axis_max = panel.get("x_axis_max")
     if x_axis_max is not None:
         x_max = max(x_max, float(x_axis_max))
+    if x_axis_hard_max is not None:
+        x_max = min(x_max, float(x_axis_hard_max))
     ax.set_xlim(x_min, x_max)
 
     y_min, y_max = _compute_map_limits(usable[MAP_COLUMN], task=task)
@@ -281,17 +301,20 @@ def build_figure(usable: pd.DataFrame, *, task: str):
     mpl.rcParams["font.serif"] = [FONT_FAMILY]
 
     fig = plt.figure(figsize=(FIG_WIDTH_IN, FIG_HEIGHT_IN), dpi=300)
-    grid = GridSpec(2, 4, figure=fig, height_ratios=[1.0, 1.02])
+    grid = GridSpec(2, 2, figure=fig)
 
-    ax_gpu = fig.add_subplot(grid[0, 0:2])
-    ax_power = fig.add_subplot(grid[0, 2:4], sharey=ax_gpu)
-    ax_temp = fig.add_subplot(grid[1, 1:3], sharey=ax_gpu)
+    ax_latency = fig.add_subplot(grid[0, 0])
+    ax_gpu = fig.add_subplot(grid[0, 1], sharey=ax_latency)
+    ax_power = fig.add_subplot(grid[1, 0], sharey=ax_latency)
+    ax_temp = fig.add_subplot(grid[1, 1], sharey=ax_latency)
 
-    _plot_panel(ax_gpu, usable, task=task, panel=PANELS[0], show_ylabel=True)
-    _plot_panel(ax_power, usable, task=task, panel=PANELS[1], show_ylabel=False)
-    _plot_panel(ax_temp, usable, task=task, panel=PANELS[2], show_ylabel=True)
+    _plot_panel(ax_latency, usable, task=task, panel=PANELS[0], show_ylabel=True)
+    _plot_panel(ax_gpu, usable, task=task, panel=PANELS[1], show_ylabel=False)
+    _plot_panel(ax_power, usable, task=task, panel=PANELS[2], show_ylabel=True)
+    _plot_panel(ax_temp, usable, task=task, panel=PANELS[3], show_ylabel=False)
 
-    ax_power.tick_params(axis="y", labelleft=False)
+    ax_gpu.tick_params(axis="y", labelleft=False)
+    ax_temp.tick_params(axis="y", labelleft=False)
 
     _, highlight_color, highlight_label = _highlight_config(task)
     legend_handles = [
@@ -327,8 +350,8 @@ def build_figure(usable: pd.DataFrame, *, task: str):
         handletextpad=0.5,
     )
 
-    fig.subplots_adjust(left=0.09, right=0.985, top=0.97, bottom=0.14, hspace=0.34, wspace=0.42)
-    return fig, (ax_gpu, ax_power, ax_temp)
+    fig.subplots_adjust(left=0.1, right=0.985, top=0.97, bottom=0.14, hspace=0.34, wspace=0.28)
+    return fig, (ax_latency, ax_gpu, ax_power, ax_temp)
 
 
 def save_direct(fig, name: str) -> Path:
