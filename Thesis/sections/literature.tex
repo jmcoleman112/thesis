@@ -152,7 +152,7 @@ Ball         & 565 \\
 
 \end{table}
 
-The tracking of these bounding boxes is then implemented (MOT); modern approaches often use the SORT algorithm, in which object identities are maintained using Kalman filters for motion prediction and the Hungarian algorithm for object association \cite{7533003}. 
+The tracking of these bounding boxes is then implemented; modern approaches often use the SORT (Simple Online and Realtime Tracking)algorithm, in which object identities are maintained using Kalman filters for motion prediction and the Hungarian algorithm for object association \cite{7533003}. 
 
 \subsubsection{Common Approaches: Key-point Detection}
 \label{subsubsec:keypoint}
@@ -221,8 +221,7 @@ This structure provides an efficient way to scale model size based on user needs
 
 \subsubsection{YOLO11 vs. YOLO26 Architecture}
 
-The newer YOLO26 family differs from YOLO11 through a series of incremental modifications \cite{UltralyticsYOLO}. Architecturally, YOLO26 introduces a new shortcut connection within the neck, and a new attention mechanism in the final C3k2 stage before detection. In the detection pipeline, YOLO11 utilises Distribution Focal Loss, whereas YOLO26 instead uses direct box regression and an NMS-free framework. YOLO26 also incorporates Progressive Loss Balancing, Small-Target-Aware Label Assignment, and the MuSGD optimiser. These changes indicate that YOLO26 is more focused towards stable training, small-object performance, and efficient edge-oriented deploy-
-ment than YOLO11, but the high-level architecture remains largely unchanged \cite{UltralyticsYOLO}.
+The newer YOLO26 family differs from YOLO11 through a series of incremental modifications \cite{UltralyticsYOLO}. Architecturally, YOLO26 introduces a new shortcut connection within the neck to improve feature flow through the network, and a new attention mechanism in the final C3k2 stage before detection to place greater emphasis on informative spatial feature. In the detection pipeline, YOLO11 utilises distribution focal loss for box regression, whereas YOLO26 instead uses direct box regression and an Non-Maximum-Suppression-free framework. YOLO26 also incorporates Progressive Loss Balancing, small target aware labelling, and a more stable optimisation strategy (MuSGD). These changes indicate that YOLO26 is more focused towards stable training and small-object performance than YOLO11, but the high-level architecture remains largely unchanged \cite{UltralyticsYOLO}.
 
 \subsection{Literature Review: Edge Deployment Hardware}
 \label{lit:edge_hardware}

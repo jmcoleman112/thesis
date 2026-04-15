@@ -20,6 +20,7 @@ from figure_save_dialog import prompt_save_figure
 
 REQUIRED_COLS = ["Model", "Location", "Latency ms", "Validation2 mAP50-95"]
 MAP_COLUMN = "Validation2 mAP50-95"
+DISPLAY_MAP_LABEL = "mAP50-95"
 MIN_MAP = 0.97
 MAX_LATENCY_MS = 40.0
 CSV_PATH = Path(__file__).resolve().parents[2] / "research" / "model_summaries.csv"
@@ -188,7 +189,7 @@ def main() -> int:
         annotation.set_path_effects([pe.withStroke(linewidth=2.2, foreground="white")])
 
     ax.set_xlabel("Latency ms", fontsize=8)
-    ax.set_ylabel(MAP_COLUMN, fontsize=8)
+    ax.set_ylabel(DISPLAY_MAP_LABEL, fontsize=8)
     ax.tick_params(axis="both", labelsize=7)
     ax.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
     ax.grid(True, linestyle="--", alpha=0.4)
