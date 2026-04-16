@@ -130,7 +130,7 @@ Overall, FP16 quantisation emerges as a reliable compression step for both tasks
 
 \subsubsection{Pruning}
 
-Figure \ref{fig:pruning_results} illustrates the mAP$_{50\text{--}95}$ vs. latency relationship for the YOLO11 and YOLO26 object and pose models under increasing pruning strength. As before, each line traces a baseline model through 90\%, 80\%, and 70\% weight-retention pruning levels. Note that YOLO26-pose pruning results are omitted from Figure \ref{fig:pruning_results} due to training instability encountered during pruning at this architecture and task combination. This will be explored further in the Discussions section (specifically Section \ref{task_compression_discussion}).
+Figure \ref{fig:pruning_results} illustrates the mAP$_{50\text{--}95}$ vs. latency relationship for the YOLO11 and YOLO26 object and pitch keypoint models under increasing pruning strength. As before, each line traces a baseline model through 90\%, 80\%, and 70\% weight-retention pruning levels. Note that YOLO26-pose pruning results are omitted from Figure \ref{fig:pruning_results} due to training instability encountered during the pruning of this specific architecture–task combination. This will be explored further in the Discussions section (specifically Section \ref{task_compression_discussion}).
 
 \begin{figure}[H]
     \centering
@@ -139,63 +139,72 @@ Figure \ref{fig:pruning_results} illustrates the mAP$_{50\text{--}95}$ vs. laten
     \includegraphics[width=.8\linewidth]{images/map50_95_vs_latency_pruning_pairs_nsmlx.png}
 \end{figure}
 
-For the object detection models, pruning produces modest but consistent latency reductions across both YOLO11 and YOLO26 families, with the larger model variants exhibiting the most meaningful speed improvements. The mAP$_{50\text{--}95}$ degradation is not significant at the 90\% retention level, particularly for the medium-to-large model scales, suggesting that light pruning is a possible secondary compression method after quantisation and input reduction. At the 80\% retention level, and at 70\% where pruning succeeded, accuracy degradation becomes more pronounced, particularly for the smaller variants, indicating that heavy pruning may not be suitable in this context.
+For the object detection models, pruning produces modest but consistent latency reductions across both YOLO11 and YOLO26 families, with the larger model variants exhibiting the most meaningful speed improvements. The mAP$_{50\text{--}95}$ degradation is not significant at the 90\% retention level, often around a $\sim$1\% reduction, suggesting that light pruning is a possible secondary compression method after quantisation and input reduction. At the 80\% retention level, and at 70\% where pruning succeeded, accuracy degradation becomes more pronounced at $\sim$2--3\%, particularly for the smaller YOLO11 variants, indicating that heavy pruning may not be suitable in this context.
 
-The pitch keypoint models show different trends; across almost all model variants, substantial mAP$_{50\text{--}95}$ reductions exist without significant latency improvements. This is consistent with the resolution reduction and INT8 quantisation observations, and further supports the conclusion that keypoint localisation is highly dependent on spatial detail and is not conducive to aggressive compression strategies.
+The pitch keypoint models show different trends; across almost all model variants, substantial mAP$_{50\text{--}95}$ reductions of $\sim$10--50\% exist without significant latency improvements. This is consistent with the resolution reduction and INT8 quantisation observations, and further supports the conclusion that keypoint localisation is highly dependent on spatial detail and is not conducive to aggressive compression strategies.
 
 \subsubsection{Knowledge Distillation}
 
-Finally, Figure \ref{fig:knowledge_distillation_results} presents the effect of knowledge distillation on the mAP$_{50\text{--}95}$ versus latency trade-off for the YOLO11 and YOLO26 object and pose model families. To remove the PyTorch implementation inefficiencies discussed in the summary analysis, all distilled models presented here were exported to accelerated engine format prior to evaluation.
+Finally, Figure \ref{fig:knowledge_distillation_results} presents the effect of knowledge distillation on the mAP$_{50\text{--}95}$--latency trade-off for the YOLO11 and YOLO26 object and pitch keypoint model families. To remove the PyTorch implementation inefficiencies discussed in the summary analysis, all distilled models presented here were exported to accelerated \verb|.engine| format prior to evaluation.
 
 \begin{figure}[H]
     \centering
-    \caption{Knowledge distillation trade-off.}
+    \caption{Knowledge Distillation Trade-off Analysis.}
     \label{fig:knowledge_distillation_results}
     \includegraphics[width=.8\linewidth]{images/map50_95_vs_latency_knowledge_ns_chains.png}
 \end{figure}
 
-For the object detection models (and especially smaller models), knowledge distillation produces only marginal changes in both latency and mAP$_{50\text{--}95}$ relative to the accelerated baseline. This indicates that distillation, in isolation, offers limited utility as a standalone compression technique for object detection in this context, as the student models fail to achieve meaningful latency reductions.
+For the object detection models (and especially smaller models), knowledge distillation produces only marginal changes in both latency and mAP$_{50\text{--}95}$ relative to the accelerated baseline. This indicates that distillation in isolation offers limited utility as a standalone compression technique for object detection in this context, as the student models fail to achieve meaningful latency reductions or accuracy improvements.
 
-The pose model results are more varied. The YOLO11-pose family exhibits a broadly similar pattern to the object detection models, with distilled variants remaining close to their baselines in both accuracy and latency. The YOLO26-pose family, however, displays considerably more instability: several distilled variants suffer notable mAP$_{50\text{--}95}$ reductions with little corresponding latency benefit, suggesting that the YOLO26-pose architecture is less compatible with knowledge transfer. Overall, knowledge distillation in isolation appears to offer limited standalone compression benefit in this study.
+The YOLO11-pose family exhibits a broadly similar pattern to the object detection models, with distilled variants remaining close to their baselines in both accuracy and latency. The YOLO26-pose family, however, displays considerably more instability: several distilled variants suffer notable mAP$_{50\text{--}95}$ reductions with little corresponding latency benefit, suggesting that the YOLO26-pose architecture is less compatible with knowledge transfer. Overall, knowledge distillation in isolation appears to offer limited standalone compression benefit in this study.
 
 \subsection{Best Models}
 
-With the compression techniques and their effectiveness analysed, the optimal object detection and pose estimation models can now be selected for the full-stack system. Given a target system frame rate of approximately 20 FPS, the combined latency budget for both models sits at around 40--50 ms. Accounting for system-level optimisations such as inference intervals and parallelisation, this budget can reasonably be extended to approximately 80 ms, allocating roughly 40 ms per model. Within this constraint, the models to be chosen are filtered to those remaining within budget while preserving as much of the baseline mAP$_{50\text{--}95}$ as possible.
+With the compression techniques and their effectiveness analysed, the optimal object detection and keypoint localisation models can now be selected for the full-stack system. As discussed in the problem aims, compressed models should ideally achieve mAP$_{50\text{--}95}$ values within 15\% of comparable models reported in prior literature. The literature review identified that strong mAP$_{50\text{--}95}$ values for player/ball detection models in the literature are around 0.915 \cite{footandball}, giving a lower limit on object detection model mAP$_{50\text{--}95}$ of $.915 \times 85\% \approx .78$. Likewise, the problem aims stated a mimimum full-stack latency of 100ms, giving a roughly 50ms ceiling for the object detection and keypoint estimation components individually. Allowing some headroom for pre and post-processing, a tighter ceiling of 40 ms will be applied. Figure~\ref{fig:best_object_models} presents the mAP$_{50\text{--}95}$ versus latency plot for all object detection models within this region, with the clearly best models highlighted in orange and non-shortlisted models displayed in grey.
 
 \begin{figure}[H]
     \centering
-    \caption{Best object detection models under 40 ms latency.}
+    \caption{Best Object Detection Models under Latency and Accuracy Restrictions.}
     \label{fig:best_object_models}
-    \includegraphics[width=.75\linewidth]{../Figures/produced_images/best_model_analysis_object.png}
+    \includegraphics[width=.85\linewidth]{../Figures/produced_images/best_model_analysis_object.png}
+    \begin{minipage}{\linewidth}
+        \raggedright
+        {\footnotesize \textit{Note: In above, p90 refers to pruning to 90\% retention. 960/768/640 refer to input resolution reduction to 75\%, 60\%, and 50\% respectively. ``from'' indicates distilation from the parent model (on the right). }}
+    \end{minipage}
 \end{figure}
 
-Figure \ref{fig:best_object_models} reveals a clear Pareto frontier among the candidate object detection models. At the higher end of the latency budget, the \textbf{FP16-quantised YOLO26s} model achieves the strongest mAP$_{50\text{--}95}$, with a distilled variant \textbf{(26s from 26m FP16)} offering a comparable trade-off at a marginally higher latency. At intermediate latencies, the \textbf{INT8-quantised YOLO26s} and the 960px input resolution variants provide competitive options, with pruned combinations also performing well in this range. At the lower end of the latency budget, the \textbf{FP16-quantised YOLO11n} and its distilled and pruned variants offer strong trade-offs, as does the \textbf{YOLO26s model at 60\% input resolution}. The project aims state that the compressed models should remain within 15\% of comparable models reported in the literature. As discussed in the literature review, strong mAP$_{50\text{--}95}$ for player/ball detection models in the literature is approximately 0.915 \cite{footandball}, and all models selected here remain above the corresponding threshold of $0.915 \times 0.85 = 0.77.7$, indicating that they meet this criterion.
+Figure \ref{fig:best_object_models} reveals a clear Pareto frontier among the candidate object detection models. At the higher end of the latency budget, the \textbf{FP16-quantised YOLO26s} model achieves the strongest mAP$_{50\text{--}95}$, with a distilled variant \textbf{(26s from 26m FP16)} offering a comparable trade-off at a marginally lower latency. At intermediate latencies, the \textbf{INT8 26s} and \textbf{FP16 11n (either Distilled or 90\% Pruned)} variants offer strong trade-offs of mAP$_{50\text{--}95}$ and latency. At the lower end of the latency budget, the \textbf{FP16 26s at 60\%/50\% Input Reduction} variants, alongside the \textbf{FP16 26m at 50\% Input Reduction and Pruned to 90\%} model, offer extremely low latencies at a signficant $\sim$15\% mAP$_{50\text{--}95}$ loss.
 
-To illustrate the behaviour of the shortlisted candidates, Figure \ref{fig:confusion_matrix} presents the normalised confusion matrix for the \textbf{YOLO26s model at 75\% input resolution and FP16 precision}. The top-performing object models show broadly similar confusion patterns, and so this matrix is approximately representative of the shortlist.
+To illustrate the behaviour of the shortlisted candidates, Figure \ref{fig:confusion_matrix} presents the normalised confusion matrix for the \textbf{YOLO26s model at 60\% input resolution and FP16 }. The top-performing object models show broadly similar confusion patterns, and so this matrix is approximately representative of the shortlist.
 
 \begin{figure}[H]
     \centering
-    \caption{Normalised confusion matrix of YOLO26s at 75\% input resolution and FP16.}
+    \caption{Normalised Object Detection Confusion Matrix.}
     \label{fig:confusion_matrix}
-    \includegraphics[width=.75\linewidth]{images/confusion_matrix_normalized.png}
+    \includegraphics[width=.8\linewidth]{images/confusion_matrix_normalized.png}
 \end{figure}
 
 As shown in Figure \ref{fig:confusion_matrix}, the model achieves near-perfect classification accuracy for the goalkeeper, player, and referee classes. The primary source of error is ball detection, where 13\% of ball instances are missed entirely, likely attributable to the ball's small size, fast motion, and frequent occlusion in broadcast footage. This indicates a clear area for future improvement, as accurate ball localisation is critical for downstream pass and possession analysis. A secondary source of error is the misclassification of background entities as players or referees, although referee--background misclassification is unimportant given that the referee class is not a primary input to high-level tactical analysis.
 
-With the best object detection models identified, the same selection process is applied to the pose estimation models. Figure \ref{fig:best_pose_models} presents the equivalent filtered plot for pitch keypoint models, again with a 40 ms latency ceiling. 
+With the best object detection models identified, the same selection criteria can be applied to the keypoint localisation models. The literature review identified a benchmark mAP${50\text{--}95}$ of approximately 0.995 for YOLO-based pitch keypoint estimation \cite{rustebakke2025extracting}, which, applying the ``within 15\%'' threshold from the problem aims, yields a minimum acceptable mAP${50\text{--}95}$ of $0.995 \times 85\% = 0.845$. The 40ms latency ceiling established for the object detection stage is retained here. Figure~\ref{fig:best_pose_models} presents all keypoint localisation models within this region, with shortlisted models highlighted in green and the remainder shown in grey.
+
 
 \begin{figure}[H]
     \centering
-    \caption{Best pose estimation models under 40 ms latency.}
+    \caption{Best Keypoint Models under Latency and Accuracy Restrictions.}
     \label{fig:best_pose_models}
     \includegraphics[width=.75\linewidth]{../Figures/produced_images/best_model_analysis_pose.png}
+        \begin{minipage}{\linewidth}
+        \raggedright
+        {\footnotesize \textit{Note: In above, p90 refers to pruning to 90\% retention. 960/768/640 refer to input resolution reduction to 75\%, 60\%, and 50\% respectively. ``from'' indicates distilation from the parent model (on the right). }}
+    \end{minipage}
 \end{figure}
 
-As shown in Figure \ref{fig:best_pose_models}, the optimal frontier for pitch keypoint estimation is considerably more concentrated than for object detection, with only four relevant shortlisted models, all of which are derivatives of the \textbf{YOLO26n-pose} family. The \textbf{FP16-quantised YOLO26n-pose} achieves the highest accuracy within the latency budget, while distilled and pruned variants with reduced input resolutions provide faster inference at a modest accuracy cost. The dominance of the YOLO26n-pose family here is consistent with the earlier finding that this variant exhibited unusual robustness to compression relative to the broader pose model inventory. Prior works of YOLO-based pose estimation models in the literature have achieved mAP$_{50\text{--}95}$ of around 0.995 \cite{rustebakke2025extracting}, and all models selected here remain above the corresponding threshold of $0.995 \times 0.85 = 0.845$, indicating that they meet the project compression criteria. 
+As shown in Figure \ref{fig:best_pose_models}, the optimal frontier for pitch keypoint estimation is considerably more concentrated than for object detection, with only four relevant shortlisted models, all of which are derivatives of the \textbf{YOLO26n-pose} family. The \textbf{FP16-quantised YOLO26n-pose} achieves the highest accuracy within the latency budget, while distilled and pruned variants with reduced input resolutions provide faster inference at a very modest accuracy cost ($<1\%$). The dominance of the YOLO26n-pose family here is consistent with the earlier finding that this variant exhibited unusual robustness to compression relative to the broader pose model inventory.
 
 \subsection{Full-Stack System}
 
-With the 9 best-performing object models and 4 best-performing keypoint models identified, the full-stack system can now be prepared and evaluated for both analytical accuracy and hardware efficiency. The system itself is first briefly described, after which the full-stack results are presented and analysed. 
+With the 9 best-performing object models and 4 best-performing keypoint models identified, the full-stack system can now be prepared and evaluated for both analytical accuracy and hardware efficiency. The system itself will first be briefly described, after which the full-stack results are presented and analysed. 
 
 \subsection{Full-Stack System Implementation}
 Figure \ref{fig:fullstack_parameter_screen_2} shows the parameter screen for the full-stack system. This screen allows the user to select the desired video, object model, and pose model, and to define team colours for each team's outfield players and goalkeeper. Various system-level parameters can also be selected here, including inference intervals, confidence thresholds, pass/possession hyperparameter settings, and logging level. 
@@ -210,7 +219,7 @@ Figure \ref{fig:fullstack_parameter_screen_2} shows the parameter screen for the
     }
 \end{figure}
 
-Inference begins once a video is uploaded, with the footage treated as a continuous stream and frames read and processed sequentially. The primary output of the system is an exposed endpoint containing object and keypoint locations, both in image coordinates and 2D pitch coordinates, as well as frame-by-frame pass and possession predictions. The system also contains an HTML visualisation endpoint which, if accessed, displays the video with the detected objects and keypoints overlaid, together with the predicted passes and possessions. This endpoint is shown in Figure \ref{fig:fullstack_parameter_screen_1}.
+Inference begins once a video is uploaded, with the footage treated as a continuous stream and frames read and processed sequentially. The primary output of the system is an exposed JSON endpoint containing object and keypoint locations, both in image coordinates and 2D pitch coordinates, as well as frame-by-frame pass and possession predictions. The system also contains an HTML visualisation endpoint which, if accessed, displays the video with the detected objects and keypoints overlaid, together with the predicted passes and possessions. This visualisation endpoint is shown in Figure \ref{fig:fullstack_parameter_screen_1}.
 
 \begin{figure}[H]
     \centering
@@ -219,61 +228,61 @@ Inference begins once a video is uploaded, with the footage treated as a continu
     \includegraphics[width=\linewidth]{images/Screenshot_2026-04-07_164923.png}
 \end{figure}
 
-As the system is not designed around the visualisation endpoint, this component was not optimised for real-time performance and was largely excluded from the optimisation effort. The main optimisation applied here was the use of client-side rendering rather than the initial server-side rendering, which reduced the latency of the visualisation endpoint by around 50\%. With the system implemented, the full-stack results can now be presented and analysed.
+As the system is not designed around the visualisation endpoint, this component was not optimised for real-time performance and was largely excluded from the optimisation effort. With the system implemented, the full-stack results can now be presented and analysed.
 
 \subsubsection{Full-Stack System Performance}
 
-The models identified in Figures \ref{fig:best_object_models} and \ref{fig:best_pose_models} were evaluated within the full-stack pipeline to assess higher-level statistical accuracy against the SoccerNet baseline system, which achieves a pass mAP$_{1\text{--}5}$ of 71.2\% \cite{tracking}. Each model combination was evaluated on a continuous ten-minute football video, and pass mAP$_{1\text{--}5}$, end-to-end latency, GPU usage, power draw, and temperature were recorded. This video contained the first 10 minutes of a professional English soccer match, contained ~300 pass events over the 10 minutes. and was chosen specifically to be outside the datasets used for model training. The analysis is limited to one video due to the lack of multiple fully annotated videos that did not overlap with the training data. The figure also displays a green region indicating performance within 15\% of the baseline, as stated in the project aims. Note that the visualisation endpoint was not enabled for this evaluation, as it was not sufficiently optimised.
+The models identified in Figures \ref{fig:best_object_models} and \ref{fig:best_pose_models} above were evaluated within the full-stack pipeline to assess higher-level statistical accuracy against the SoccerNet baseline system, which achieves a pass mAP$_{1\text{--}5}$ of 71.2\% \cite{tracking}. Each model combination was evaluated on a continuous ten-minute football video, and pass mAP$_{1\text{--}5}$, end-to-end latency, GPU usage, power draw, and temperature were recorded. This video contained the first 10 minutes of a professional English soccer match, contained over 300 pass events throughout the 10 minutes, and was chosen specifically to be outside the datasets used for model training. The analysis is limited to one video due to the lack of multiple fully annotated videos that did not overlap with the training data. Figure \ref{fig:sweep_new_map1_5_vs_latency} below displays the best 15 model combinations, as well as a green region indicating performance within 15\% of the baseline, in line with the project aims. Note that the visualisation endpoint was not enabled for this evaluation, as it was not sufficiently optimised.
 
 \begin{figure}[H]
     \centering
-    \caption{Pass mAP$_{1\text{--}5}$ versus latency.}
+    \caption{Full-stack Pass mAP$_{1\text{--}5}$ versus Latency Analysis.}
     \label{fig:sweep_new_map1_5_vs_latency}
     \includegraphics[width=.85\linewidth]{../Figures/produced_images/sweep_new_map1_5_vs_latency.png}
 \end{figure}
 
-Figure \ref{fig:sweep_new_map1_5_vs_latency} shows that the strongest model combinations approach the SoccerNet baseline pass mAP$_{1\text{--}5}$ of 71.2\%, with the best results falling within 15\% of the baseline. This is a strong result, demonstrating that the compressed models can recover near-baseline analytical performance within a practical latency envelope. The top-performing combinations operate at end-to-end latencies of 80--110 ms, corresponding to approximately 9--12 FPS without dramatic system-level optimisation. While this falls short of the 20 FPS target, the pipeline was evaluated without parallelisation or varied inference intervals, both of which are likely to yield meaningful reductions in effective latency. This therefore represents a clear area for future improvement. 
+Figure \ref{fig:sweep_new_map1_5_vs_latency} shows that the strongest model combinations approach the SoccerNet baseline pass mAP$_{1\text{--}5}$ of 71.2\%, with the best results falling within 15\% of the baseline. This is a strong result, demonstrating that the compressed models can recover near-baseline analytical performance despite significant latency improvements. The top-performing combinations operated at end-to-end latencies of 80--110 ms, corresponding to approximately 9--12 FPS; while this falls short of the ideal 20 FPS target, it meets the minimum latency requirement of 100ms as originally stated in the problem aims. The pipeline was also evaluated without parallelisation or varied inference intervals, both of which are likely to yield meaningful reductions in effective latency. This therefore indicates a clear area for future improvement. 
 
 Figure \ref{fig:piechart_latency_breakdown} displays the latency breakdown for the full-stack system, using uncompressed and compressed models to demonstrate the impact of compression.
 
 \begin{figure}[H]
     \centering
-    \caption{Full-stack system Latency Causes.}
+    \caption{Full-stack system Latency Breakdown.}
     \label{fig:piechart_latency_breakdown}
     \includegraphics[width=\linewidth]{../Figures/produced_images/latency_breakdown_compare.png}
 \end{figure}
 
-The compression pipeline reduces total system latency from \textbf{203.9} ms to \textbf{90.6} ms, a reduction of \textbf{55.6\%}. The keypoint estimation component achieves the greatest relative improvement, falling from \textbf{64.2\%} to \textbf{31.0\%} of total latency, while object detection increases from \textbf{31.1\%} to \textbf{47.7\%}. Note that, while object detection's absolute latency decreases, its relative share increases due to the proportionally larger reduction achieved by the keypoint component. The other processing steps and team assignment also increase markedly in relative share, indicating another potential area for future optimisation.
+The compression pipeline reduces total system latency from \textbf{203.9} ms to \textbf{90.6} ms, a reduction of \textbf{55.6\%}. The keypoint estimation component achieves the greatest relative improvement, falling from \textbf{64.2\%} to \textbf{31.0\%} of total latency, while object detection increases from \textbf{31.1\%} to \textbf{47.7\%}. Note that, while object detection's absolute latency decreases, its relative share increases due to the proportionally larger reduction achieved by the keypoint component. The other processing steps and team assignment also increase in relative share, indicating those methods as another potential area for future optimisation.
 
 With end-to-end latency characterised, the relationship between pass mAP$_{1\text{--}5}$ and other system-level performance metrics can now be examined.
 
 \subsubsection{Hardware Resource Utilisation}
 
-Beyond latency, the shortlisted full-stack combinations were evaluated against the GPU usage, power draw, and thermal constraints defined earlier (80\%, 20 W, and 68°C respectively). Figure \ref{fig:sweep_new_map1_5_hardware_grid} presents the pass mAP$_{1\text{--}5}$ against each of these metrics for the shortlisted combinations.
+Beyond latency, the shortlisted full-stack model combinations were evaluated against the GPU usage, power draw, and thermal constraints defined earlier (80\%, 20 W, and 68°C respectively). Figure \ref{fig:sweep_new_map1_5_hardware_grid} presents the pass mAP$_{1\text{--}5}$ against each of these metrics for the 15 best model combinations.
 
 \begin{figure}[H]
     \centering
-    \caption{Pass mAP$_{1\text{--}5}$ versus GPU usage, power draw, and temperature.}
+    \caption{Fullstack Pass mAP$_{1\text{--}5}$ versus GPU usage, Power Draw, and Temperature.}
     \label{fig:sweep_new_map1_5_hardware_grid}
     \includegraphics[width=.95\linewidth]{../Figures/produced_images/sweep_new_map1_5_hardware_grid.png}
 \end{figure}
 
-As can be seen, the selected combinations operate comfortably within the defined thresholds across all three metrics. GPU utilisation ranges from approximately 40--55\%, power draw from 5--15 W, and device temperature from 48--56°C --- all substantially below the respective limits of 80\%, 20 W, and 68°C as defined in the problem aims. As discussed earlier in the methodology, it is also important to analyse the computer vision models independently of the full-stack pipeline. To allow this, the latency and hardware metrics of the best object models are displayed in Figure \ref{fig:best_model_analysis_object_hardware_grid}, with the non-shortlisted artefacts displayed in grey.
+As can be seen, the selected combinations operate comfortably within the defined thresholds across all three metrics. GPU utilisation ranges from approximately 40--55\%, power draw from 5--15 W, and device temperature from 48--56°C: all substantially below the respective limits of 80\%, 20 W, and 68°C as defined in the problem aims. As discussed earlier in the methodology, it is also important to analyse the computer vision models independently of the full-stack pipeline. To allow this, the latency and hardware metrics of the chosen object models are highlighted in Figure \ref{fig:best_model_analysis_object_hardware_grid}, with the non-shortlisted artefacts displayed in grey.
 
 \begin{figure}[H]
     \centering
-    \caption{Latency, GPU usage, power draw, and temperature of shortlisted object models.}
+    \caption{System Metrics of Shortlisted Object Models.}
     \label{fig:best_model_analysis_object_hardware_grid}
     \includegraphics[width=.95\linewidth]{../Figures/produced_images/best_model_analysis_object_hardware_grid.png}
 \end{figure}
 
-As can be seen, the shortlisted object models of interest remain within the 40 ms shortlist ceiling and do not exceed the defined hardware thresholds, yet consistently achieve the highest mAP$_{50\text{--}95}$ values within those regions. This pattern indicates that the shortlisting process has successfully identified models that extract strong analytical performance relative to both latency and hardware resource consumption, rather than simply those that happen to consume the most hardware resource. The same analysis for the shortlisted pose models is shown in Figure \ref{fig:best_model_analysis_pose_hardware_grid}.
+As can be seen, the shortlisted object models of interest remain within the 40 ms shortlist ceiling and do not exceed the defined hardware thresholds, yet consistently achieve the highest mAP$_{50\text{--}95}$ values within those regions. This pattern indicates that the shortlisting process has successfully identified models that extract strong analytical performance relative to both latency and hardware resource consumption, rather than simply those that happen to consume the most hardware resource. The same analysis for the shortlisted keypoints models is shown in Figure \ref{fig:best_model_analysis_pose_hardware_grid}.
 
 \begin{figure}[H]
     \centering
-    \caption{Latency, GPU usage, power draw, and temperature of shortlisted pose models.}
+    \caption{System Metrics of Shortlisted Keypoint Models.}
     \label{fig:best_model_analysis_pose_hardware_grid}
     \includegraphics[width=.95\linewidth]{../Figures/produced_images/best_model_analysis_pose_hardware_grid.png}
 \end{figure}
 
-The shortlisted pose models present a slightly different profile. Relative to the object models, the models cluster at the lower end of both latency and the three hardware resource dimensions, indicating that these models are some of the most efficient of all analysed models. Across both tasks, the available headroom between observed usage and the defined constraints remains substantial, suggesting that the current compression pipeline does not place the system at risk of hardware saturation under typical operating conditions.
+The shortlisted keypoint models show a notably lighter hardware footprint than their object detection counterparts, clustering toward the lower end of latency, GPU utilisation, power draw, and temperature. This indicates that the shortlisted keypoint models are both highly accuracrte and efficient in comparison to other models trained and compressed. Across both tasks, the margin between observed usage and the defined constraints is substantial, indicating that the compressed pipeline should operate well within hardware limits under typical conditions.

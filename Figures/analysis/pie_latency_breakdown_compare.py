@@ -51,8 +51,11 @@ def draw_donut_clean(
     total_ms: float,
     center_text: str,
     label_offsets: dict[str, tuple[float, float]] | None = None,
-):
-    labels = [name for name, _, _ in components]
+    skip_labels: set[str] | None = None,
+    absolute_label_positions: dict[str, tuple[float, float]] | None = None,
+    wedge_offsets: dict[str, tuple[float, float]] | None = None,
+) -> dict[str, dict]:
+    """Draw a donut chart and return wedge/label positions for above-threshold slices."""
     values = [value for _, value, _ in components]
     colors = [color for _, _, color in components]
 
@@ -60,6 +63,9 @@ def draw_donut_clean(
     donut_width = 0.45
     pct_radius = donut_radius - (donut_width / 2.0)
     label_offsets = label_offsets or {}
+    skip_labels = skip_labels or set()
+    absolute_label_positions = absolute_label_positions or {}
+    wedge_offsets = wedge_offsets or {}
 
     wedges, _ = ax.pie(
         values,
@@ -81,6 +87,8 @@ def draw_donut_clean(
         fontweight="bold",
     )
 
+    positions: dict[str, dict] = {}
+
     for wedge, (name, value, color) in zip(wedges, components):
         pct = 100 * value / total_ms if total_ms else 0.0
         if pct < LABEL_THRESHOLD_PCT:
@@ -91,36 +99,46 @@ def draw_donut_clean(
 
         x = donut_radius * math.cos(theta_rad)
         y = donut_radius * math.sin(theta_rad)
+        wdx, wdy = wedge_offsets.get(name, (0.0, 0.0))
+        x += wdx
+        y += wdy
 
-        label_r = 1.32
-        lx = label_r * math.cos(theta_rad)
-        ly = label_r * math.sin(theta_rad)
+        if name in absolute_label_positions:
+            lx, ly = absolute_label_positions[name]
+        else:
+            label_r = 1.32
+            lx = label_r * math.cos(theta_rad)
+            ly = label_r * math.sin(theta_rad)
+            dx, dy = label_offsets.get(name, (0.0, 0.0))
+            lx += dx
+            ly += dy
 
-        dx, dy = label_offsets.get(name, (0.0, 0.0))
-        lx += dx
-        ly += dy
+        positions[name] = {"wedge_xy": (x, y), "label_xy": (lx, ly), "color": color, "annotation": None}
 
-        ha = "left" if lx >= 0 else "right"
+        # Draw outer label annotation unless skipped
+        if name not in skip_labels:
+            ha = "left" if lx >= 0 else "right"
+            ann = ax.annotate(
+                name,
+                xy=(x, y),
+                xytext=(lx, ly),
+                ha=ha,
+                va="center",
+                fontsize=8.5,
+                fontweight="bold",
+                color=color,
+                arrowprops={
+                    "arrowstyle": "-",
+                    "color": color,
+                    "lw": 1.0,
+                    "shrinkA": 0,
+                    "shrinkB": 0,
+                    "connectionstyle": "arc3,rad=0.15",
+                },
+            )
+            positions[name]["annotation"] = ann
 
-        ax.annotate(
-            name,
-            xy=(x, y),
-            xytext=(lx, ly),
-            ha=ha,
-            va="center",
-            fontsize=8.5,
-            fontweight="bold",
-        color=color,
-        arrowprops={
-            "arrowstyle": "-",
-            "color": color,
-            "lw": 1.0,
-                "shrinkA": 0,
-                "shrinkB": 0,
-                "connectionstyle": "arc3,rad=0.15",
-            },
-        )
-
+        # Always draw inner percentage for designated labels
         if name in INNER_PCT_LABELS:
             pct_x = pct_radius * math.cos(theta_rad)
             pct_y = pct_radius * math.sin(theta_rad)
@@ -141,6 +159,8 @@ def draw_donut_clean(
     ax.set_aspect("equal")
     ax.set_xticks([])
     ax.set_yticks([])
+
+    return positions
 
 
 def add_shared_legend(fig, components: list[tuple[str, float, str]]):
@@ -191,20 +211,25 @@ def build_figure(
 ):
     import matplotlib as mpl
     import matplotlib.pyplot as plt
+    from matplotlib.patches import ConnectionPatch
 
     mpl.rcParams["font.family"] = "serif"
     mpl.rcParams["font.serif"] = [FONT_FAMILY]
 
     fig, axes = plt.subplots(1, 2, figsize=(FIG_WIDTH_IN, FIG_HEIGHT_IN), dpi=300)
 
-    draw_donut_clean(
+    left_positions = draw_donut_clean(
         axes[0],
         left_components,
         left_total_ms,
         center_text=f"Uncompressed:\n{left_total_ms:.1f} ms",
+        label_offsets={
+            "Object detection": (-0.25, 0.35),
+        },
+        skip_labels={"Keypoint detection"},
     )
 
-    draw_donut_clean(
+    right_positions = draw_donut_clean(
         axes[1],
         right_components,
         right_total_ms,
@@ -212,8 +237,52 @@ def build_figure(
         label_offsets={
             "Object model processing": (0.25, 0.06),
             "Keypoint model processing": (0.27, 0.08),
+            "Keypoint detection": (-0.55, -0.35),
+        },
+        absolute_label_positions={
+            "Object detection": (0.59, 1.1),
+        },
+        wedge_offsets={
+            "Object detection": (-0.1, 0.0),
         },
     )
+
+    # Draw a line from the left chart's "Keypoint detection" wedge to the
+    # left end ("K") of the shared label on the right chart.
+    # Force a render pass first so we can get the annotation text bounding box.
+    if "Keypoint detection" in right_positions and "Keypoint detection" in left_positions:
+        r = right_positions["Keypoint detection"]
+        l = left_positions["Keypoint detection"]
+        r_ann = r.get("annotation")
+
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
+
+        if r_ann is not None:
+            bbox = r_ann.get_window_extent(renderer)
+            # Left-centre of the text in display (pixel) coords, with vertical correction
+            left_centre_display = (bbox.x0, (bbox.y0 + bbox.y1) / 2)
+            xyA_raw = axes[1].transData.inverted().transform(left_centre_display)
+            xyA = (xyA_raw[0] - 0.1, xyA_raw[1] - 0.15)  # x and vertical correction
+        else:
+            xyA = r["label_xy"]
+
+        # Pull the left end back slightly from the wedge edge
+        wx, wy = l["wedge_xy"]
+        scale = 0.88  # <1 pulls endpoint toward centre
+        xyB = (wx * scale, wy * scale)
+
+        con = ConnectionPatch(
+            xyA=xyA,
+            xyB=xyB,
+            coordsA=axes[1].transData,
+            coordsB=axes[0].transData,
+            color=r["color"],
+            lw=1.0,
+            arrowstyle="-",
+        )
+        con.set_clip_on(False)
+        fig.add_artist(con)
 
     # shared legend using left component order/colors
     add_shared_legend(fig, left_components)
@@ -227,7 +296,7 @@ def build_figure(
         arrowprops={"arrowstyle": "->", "linewidth": 2.4, "color": "#444444"},
     )
 
-    fig.subplots_adjust(left=0.04, right=0.96, top=0.82, bottom=0.08, wspace=0.28)
+    fig.subplots_adjust(left=0.04, right=0.96, top=0.82, bottom=0.08, wspace=0.08)
     return fig, axes
 
 

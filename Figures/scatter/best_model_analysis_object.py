@@ -19,8 +19,8 @@ from figure_save_dialog import prompt_save_figure
 
 REQUIRED_COLS = ["Model", "Location", "Latency ms"]
 MAP_COLUMN = "mAP50-95"
-MIN_MAP = 0.70
-MAX_LATENCY_MS = 60  # e.g. 40.0
+MIN_MAP = 0.78
+MAX_LATENCY_MS = 40
 CSV_PATH = Path(__file__).resolve().parents[2] / "research" / "model_summaries.csv"
 FILTER_TOKEN = "/object/"
 IEEE_ONE_COL_WIDTH_IN = 3.5
@@ -43,6 +43,8 @@ HIGHLIGHT_MODELS = [
     "26s_DS3_960_fp16.engine",
     "26s_DS3_from_26m_fp16.engine",
     "26s_DS3_fp16.engine",
+    "26m_DS3_p90_640_fp16.engine",
+    "26s_DS3_640_fp16.engine",
 ]
 
 ANNOTATION_OFFSETS = {
@@ -51,10 +53,12 @@ ANNOTATION_OFFSETS = {
     "11n_DS3_p90_fp16.engine": (-40, 0),
     "11n_DS3_from_11l_fp16.engine": (6, 0),
     "26s_DS3_int8.engine": (6, 0),
-    "26s_DS3_p90_960_fp16.engine": (6, 0),
+    "26s_DS3_p90_960_fp16.engine": (-45, 0),
     "26s_DS3_960_fp16.engine": (6, 0),
-    "26s_DS3_from_26m_fp16.engine": (6, 0),
+    "26s_DS3_from_26m_fp16.engine": (-50, 0),
     "26s_DS3_fp16.engine": (-28, 0),
+    "26m_DS3_p90_640_fp16.engine": (6, 0),
+    "26s_DS3_640_fp16.engine": (6, 0),
 }
 
 

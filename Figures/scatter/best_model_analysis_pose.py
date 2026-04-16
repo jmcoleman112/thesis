@@ -191,7 +191,7 @@ def main() -> int:
     ax.set_xlabel("Latency ms", fontsize=8)
     ax.set_ylabel(DISPLAY_MAP_LABEL, fontsize=8)
     ax.tick_params(axis="both", labelsize=7)
-    ax.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
+    ax.yaxis.set_major_formatter(FormatStrFormatter("%.3f"))
     ax.grid(True, linestyle="--", alpha=0.4)
 
     fig.tight_layout(pad=0.08)
