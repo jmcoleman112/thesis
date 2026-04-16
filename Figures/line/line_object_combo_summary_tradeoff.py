@@ -71,7 +71,7 @@ POINT_ORDER = [
 ]
 
 POINT_LABELS = {
-    "Uncompressed": "PT",
+    "Uncompressed": "Uncompres.",
     "Baseline engine": "Accel.",
     "Baseline FP16": "FP16",
     "Quantized + 960": "75%px",
@@ -91,7 +91,7 @@ POINT_LABELS = {
 }
 
 LABEL_OFFSETS = {
-    "Uncompressed": (-10, -10),
+    "Uncompressed": (0, 10),
     "Baseline engine": (-2, 8),
     "Baseline FP16": (-8, 4),
     "Quantized + 960": (-6, 0),
@@ -108,6 +108,26 @@ LABEL_OFFSETS = {
     "Distilled + 960": (10, -4),
     "Distilled + FP16": (8, 2),
     "Distilled + INT8": (8, -2),
+}
+
+POINT_MARKERS: dict[str, str] = {
+    "Uncompressed": "o",
+    "Baseline engine": "s",
+    "Baseline FP16": "D",
+    "Quantized + 960": "^",
+    "Quantized + 768": ">",
+    "Pruned + Accelerated": "s",
+    "Pruned + 960": "^",
+    "Pruned + FP16": "D",
+    "Pruned + 960 + FP16": "*",
+    "Pruned + INT8": "v",
+    "Distilled + Pruned + Accel.": "s",
+    "Distilled + Pruned + FP16": "D",
+    "Distilled + Pruned + INT8": "v",
+    "Distilled + Accelerated": "s",
+    "Distilled + 960": "^",
+    "Distilled + FP16": "D",
+    "Distilled + INT8": "v",
 }
 
 PATHS = [
@@ -488,36 +508,28 @@ def build_figure(points: dict[str, tuple[float, float, int]]):
             zorder=1,
         )
 
-    # Plot all points without labeling every one individually.
     for label in POINT_ORDER:
         latency, map_value, _ = points[label]
         color = GROUP_COLORS[group_key(label)]
-        size = 62 if label in {"Uncompressed", "Baseline engine"} else 58
+        marker = POINT_MARKERS.get(label, "o")
+        base_size = 70 if label in {"Uncompressed", "Baseline engine"} else 60
+        size = base_size * 1.4 if marker == "*" else base_size
         ax.scatter(
             latency,
             map_value,
             color=color,
-            marker="o",
+            marker=marker,
             s=size,
             edgecolors="white",
             linewidths=0.9,
             zorder=3,
         )
 
-    # Labels that should still be tied to a single point.
-    individual_labels = [
-        "Uncompressed",         # PT
-        "Quantized + 960",      # 75%px
-        "Quantized + 768",      # 60%px
-        "Pruned + 960 + FP16",  # 75%px+FP16
-    ]
-
-    for label in individual_labels:
+    for label in ("Uncompressed", "Baseline engine", "Baseline FP16"):
         latency, map_value, _ = points[label]
         color = GROUP_COLORS[group_key(label)]
         text = POINT_LABELS[label]
         offset = LABEL_OFFSETS[label]
-
         annotation = ax.annotate(
             text,
             xy=(latency, map_value),
@@ -525,87 +537,12 @@ def build_figure(points: dict[str, tuple[float, float, int]]):
             textcoords="offset points",
             ha="center" if offset[0] == 0 else ("left" if offset[0] > 0 else "right"),
             va="bottom" if offset[1] > 0 else "top",
-            fontsize=6.9,
+            fontsize=8.5,
             color=color,
             weight="bold",
             zorder=5,
         )
         annotation.set_path_effects([pe.withStroke(linewidth=1.8, foreground="white")])
-
-    # Shared labels with leader lines to all related points.
-    # Move text_xy values if you want to fine-tune placement.
-    shared_label_groups = [
-        {
-            "text": "Accel.",
-            "members": [
-                "Baseline engine",
-                "Pruned + Accelerated",
-                "Distilled + Pruned + Accel.",
-                "Distilled + Accelerated",
-            ],
-            "text_xy": (140, 0.875),
-            "color": "#666666",
-        },
-        {
-            "text": "FP16",
-            "members": [
-                "Baseline FP16",
-                "Pruned + FP16",
-                "Distilled + Pruned + FP16",
-                "Distilled + FP16",
-            ],
-            "text_xy": (50, 0.878),
-            "color": "#666666",
-        },
-        {
-            "text": "INT8",
-            "members": [
-                "Pruned + INT8",
-                "Distilled + Pruned + INT8",
-                "Distilled + INT8",
-            ],
-            "text_xy": (75, 0.81),
-            "color": "#666666",
-        },
-        {
-            "text": "75%px",
-            "members": [
-                "Pruned + 960",
-                "Distilled + 960",
-            ],
-            "text_xy": (112, 0.843),
-            "color": "#666666",
-        },
-    ]
-
-    for group in shared_label_groups:
-        text_x, text_y = group["text_xy"]
-        text = group["text"]
-        color = group["color"]
-
-        shared_text = ax.text(
-            text_x,
-            text_y,
-            text,
-            fontsize=7.0,
-            color=color,
-            weight="bold",
-            ha="center",
-            va="center",
-            zorder=6,
-        )
-        shared_text.set_path_effects([pe.withStroke(linewidth=1.8, foreground="white")])
-
-        for member in group["members"]:
-            px, py, _ = points[member]
-            ax.plot(
-                [text_x, px],
-                [text_y, py],
-                color=color,
-                linewidth=0.7,
-                alpha=0.8,
-                zorder=2,
-            )
 
     x_min = min(all_latencies)
     x_max = max(all_latencies)

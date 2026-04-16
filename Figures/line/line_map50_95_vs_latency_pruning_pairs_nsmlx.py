@@ -33,6 +33,7 @@ from figure_save_dialog import prompt_save_figure
 
 DEFAULT_MAP_COLUMN = "mAP50-95"
 POSE_VALIDATION2_MAP_COLUMN = "Validation2 mAP50-95"
+DISPLAY_MAP_LABEL = DEFAULT_MAP_COLUMN
 LATENCY_COLUMN = "Latency ms"
 REQUIRED_COLUMNS = [
     "Model",
@@ -329,8 +330,8 @@ def build_figure(grouped_rows: dict[tuple[str, str], dict[str, dict[str, dict[st
         pose_y_pad = max((pose_y_max - pose_y_min) * 0.10, 0.015)
         pose_axis.set_ylim(pose_y_min - pose_y_pad, pose_y_max + pose_y_pad)
 
-    axes_map[("11", "object")].set_ylabel(DEFAULT_MAP_COLUMN, fontsize=LABEL_FONT_SIZE)
-    pose_axis.set_ylabel(POSE_VALIDATION2_MAP_COLUMN, fontsize=LABEL_FONT_SIZE)
+    axes_map[("11", "object")].set_ylabel(DISPLAY_MAP_LABEL, fontsize=LABEL_FONT_SIZE)
+    pose_axis.set_ylabel(DISPLAY_MAP_LABEL, fontsize=LABEL_FONT_SIZE)
     pose_axis.set_xlabel("Latency ms", fontsize=LABEL_FONT_SIZE)
 
     size_handles = [

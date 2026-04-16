@@ -80,7 +80,7 @@ POINT_ORDER = [
 ]
 
 ANNOTATIONS = {
-    "Uncompressed": ("Uncomp.", (-10, -10)),
+    "Uncompressed": ("Uncomp.", (0, 8)),
     "Baseline engine": ("Accel.", (0, 10)),
 }
 
@@ -548,7 +548,7 @@ def build_figure(points: dict[str, tuple[float, float, int]], *, map_label: str)
                 textcoords="offset points",
                 ha="center" if offset[0] == 0 else ("left" if offset[0] > 0 else "right"),
                 va="bottom" if offset[1] > 0 else "top",
-                fontsize=6.9,
+                fontsize=8.5,
                 color=color,
                 weight="bold",
                 zorder=4,
@@ -628,7 +628,7 @@ def main() -> int:
         print(f"Error importing matplotlib: {exc}. Install it with 'pip install matplotlib'.", file=sys.stderr)
         return 1
 
-    map_label = "Average Validation2 mAP50-95" if args.validation2 else "Average mAP50-95"
+    map_label = "Average mAP50-95"
     fig = build_figure(points, map_label=map_label)
 
     saved_path: Optional[Path] = None
