@@ -2,12 +2,12 @@
 % chktex-file 36
 \section{Background Literature Review}
 
-To achieve the aims laid out in the Introduction, a background literature review has been performed to ensure that the methodology described later utilises best modern practices and research and targets a clear gap in research. Focus will be placed on an overview of the problem, common approaches and prevalent models, common model compression techniques, and common full-stack system techniques. 
+To achieve the aims laid out in the Introduction, a background literature review has been performed to ensure that the methodology described later utilises best modern practices and research, and targets a clear gap in research. Focus will be placed on an overview of the problem, common approaches and prevalent models, common model compression techniques, and common full-stack system techniques. 
 
-\subsection{Literature Review: Overview} As discussed in the introduction, modern sporting preparation and broadcast have put a larger emphasis on quantitative data than opinion-based analysis, especially with the rise of next-generation tracking and sensor technologies \cite{ReinMemmert2016}. Some of the most useful of these implementations explore tracking key statistics such as team pass completions percentages, possession, and team formation analysis through the use of object detection/tracking and pitch recognition \cite{zheng2025_review_football_cv,Mooney2014CVSports}. However, emphasis in this niche has been largely placed on accuracy over computational efficiency or real-time analysis, with some designed software systems requiring over 515B Floating Point Operations Per Inference (FLOPS) \cite{roboflow_sports_repo}, which edge devices cannot maintain.
+\subsection{Literature Review: Overview} As discussed in the introduction, modern sporting preparation and broadcast have put a larger emphasis on quantitative data than opinion-based analysis, especially with the rise of next-generation tracking and sensor technologies \cite{ReinMemmert2016}. Some of these implementations explore tracking key statistics such as team pass completions percentages, possession, and team formation analysis through the use of object detection/tracking and pitch recognition \cite{zheng2025_review_football_cv,Mooney2014CVSports}. However, emphasis in this niche has been largely placed on accuracy over computational efficiency or real-time analysis, with some designed software systems requiring over 515B Floating Point Operations Per Inference (FLOPS) \cite{roboflow_sports_repo}, which edge devices cannot maintain.
 
 \subsection{Literature Review: Common Approaches}
-Modern computer vision-based approaches to soccer analysis typically combine object detection, object tracking, and pitch keypoint estimation to generate high-level match statistics \cite{tracking}. Object detection models are used to localise players, goalkeepers, referees, and the ball, while keypoint detection models identify relevant pitch markings such as penalty box corners and the centre circle \cite{10846339}. The outputs of these two models are then combined through a post-inference pipeline to produce statistics such as possession, pass completion, and formation maps, as discussed in detail in Section \ref{subsubsec:postinference}.
+Modern computer vision-based approaches to soccer analysis often combine object detection, object tracking, and pitch keypoint estimation to generate high-level match statistics \cite{tracking}. Object detection models are used to localise players, goalkeepers, referees, and the ball, while keypoint detection models identify relevant pitch markings such as penalty box corners and the centre circle \cite{10846339}. The outputs of these two models are then combined through a post-inference pipeline to produce statistics such as possession, pass completion, and formation maps, as discussed in detail in Section \ref{subsubsec:postinference}.
 
 The reported features and statistics of some implemented software solutions are displayed below in Table \ref{softwarestacks}. Note that model accuracy and size values ($\text{mAP}_{50}$, FLOPS, Parameters) cannot be explored here, due to significant differences in software structures (both in amount of models, model output information, and implementation output). Instead, the accuracy and size of the models used in these will be explored explicitly in Subsections \ref{subsubsec:object} and  \ref{subsubsec:keypoint}.
 
@@ -39,7 +39,7 @@ The reported features and statistics of some implemented software solutions are 
         \arrayrulecolor{black}
 
         \textit{SoccerMaster} \cite{yang2025soccermaster} 
-        & \makecell[l]{Qwen2.5 (Jerseys)\\YOLOv8 (Players)}
+        & \makecell[l]{Qwen2.5 (Jerseys)\\YOLOv8l (Players)}
         & \makecell[l]{Event Detection, \\Position Map\\ Jersey Number Detection} 
         & No \\
 
@@ -65,7 +65,7 @@ The reported features and statistics of some implemented software solutions are 
 
 \subsubsection{Common Approaches: Object Detection}
 \label{subsubsec:object}
-The object detection portion of the above solutions is commonly addressed using YOLO (You Only Look Once) models \cite{Redmon_2016_CVPR}. YOLO models utilise a single pass for both localisation and detection, resulting in a low-latency detection architecture ideal for real-time analysis. This has been previously explored in soccer analysis, with models producing $\text{mAP}_{50}$ results of up to 87\%, and $\text{mAP}_{50-95}$ of up to 64.9\% using labelled broadcast soccer videos \cite{10756443}. $\text{mAP}_{50-95}$ represents the model's $\text{mAP}$ averaged across IoU thresholds between 50\%-95\%. Another potential real-time detection model is the Faster R-CNN model. Faster R-CNN utilises a 2-stage pipeline, which first separates images into candidate regions, before performing classification on a second pass \cite{7485869}. While used in post-match processing, Faster R-CNN is likely not applicable to real-time scenarios, due to this heavy 2-stage inference process. Table \ref{modelparams} below summarises some commonly used models for real-time object detection. Note that latency cannot be compared directly here, as models have not been benchmarked on equal GPUs.
+The object detection portion of the above solutions is commonly addressed using YOLO (You Only Look Once) models \cite{Redmon_2016_CVPR}. YOLO models utilise a single pass for both localisation and detection, resulting in a low-latency detection architecture ideal for real-time analysis. This has been previously explored in soccer analysis, with models producing  $\text{mAP}_{50-95}$ of up to 92\% using labelled broadcast soccer frames \cite{footandball}. As discussed earlier, $\text{mAP}_{50-95}$ represents the model's $\text{mAP}$ averaged across IoU thresholds between 50\%-95\%. A higher-level analysis of YOLO models will be explored further in Section \ref{lit:yolo}. Another potential real-time detection model is the Faster R-CNN model. Faster R-CNN utilises a 2-stage pipeline, which first separates images into candidate regions, before performing classification on a second pass \cite{7485869}. While used in post-match processing, Faster R-CNN is likely not applicable to real-time scenarios, due to this heavy 2-stage inference process. Table \ref{modelparams} below summarises some commonly used models for real-time object detection. Note that latency cannot be compared directly here, as models have not been benchmarked on equal GPUs.
 
 \begin{table}[H]
     \centering
@@ -77,22 +77,28 @@ The object detection portion of the above solutions is commonly addressed using 
         & \textbf{FLOPS} (\textbf{B}) \\
         \midrule
         \textit{YOLO} \cite{Redmon_2016_CVPR, UltralyticsYOLO} & & & \\
-        \hspace{1em} v11-n & 39.5 & 2.6 & 6.5 \\
-        \hspace{1em} v11-s & 47.0 & 9.4 & 21.5 \\
-        \hspace{1em} v11-m & 51.5 & 20.1 & 68.0 \\
-        \hspace{1em} v8-n  & 37.3 & 3.2 & 8.7 \\
+        \hspace{1em} v8-n  & 37.3 & 3.2  & 8.7 \\
         \hspace{1em} v8-s  & 44.9 & 11.2 & 28.6 \\
-        \hspace{1em} v10-s & 46.8 & N/A & 21.6 \\
+        \hspace{1em} v8-m  & 50.2 & 25.9 & 78.9 \\
+        \hspace{1em} v8-l  & 52.9 & 43.7 & 165.2 \\
+        \hspace{1em} v8-x  & 53.9 & 68.2 & 257.8 \\
+        \hspace{1em} v10-s & 46.8 & N/A  & 21.6 \\
+        \hspace{1em} v11-n & 39.5 & 2.6  & 6.5 \\
+        \hspace{1em} v11-s & 47.0 & 9.4  & 21.5 \\
+        \hspace{1em} v11-m & 51.5 & 20.1 & 68.0 \\
+        \hspace{1em} v26-n & 40.9 & 2.4  & 5.4 \\
+        \hspace{1em} v26-s & 48.6 & 9.5  & 20.7 \\
+        \hspace{1em} v26-m & 53.1 & 20.4 & 68.2 \\
         RT-DETR-R18 \cite{Zhao2023RTDETR} & 46.5 & 19.2 & 60 \\
         R50-FPN \cite{7485869, Lin2017FPN} & 41.0 & 60 & 160 \\
         \bottomrule
     \end{tabular}
-    \caption{Commonly Used Object Detection Models}
+    \caption{Commonly used object detection models.}
     \label{modelparams}
 \end{table}
 
 
-A number of commonly used and publicly available datasets exist for the training of these models. The most popular and utilised datasets are displayed below. 
+A number of commonly used and publicly available datasets exist for the training of these models. The most popular and utilised datasets are displayed below. These typical contain 400+ images of various soccer matches from different pitches and camera positions, with bounding boxes labeling the players, goalkeeper, referee, and the ball.
 
 \begin{table}[H]
 \centering
@@ -152,11 +158,11 @@ Ball         & 565 \\
 
 \end{table}
 
-The tracking of these bounding boxes is then implemented; modern approaches often use the SORT (Simple Online and Realtime Tracking)algorithm, in which object identities are maintained using Kalman filters for motion prediction and the Hungarian algorithm for object association \cite{7533003}. 
+Multi-object tracking of these detected objects is then often  implemented; modern approaches often use variations of the SORT (Simple Online and Realtime Tracking) algorithm, in which object identities are maintained using Kalman filters for motion prediction and the Hungarian algorithm for object association \cite{7533003}. The exact nature of this algorithm will be explored later in the Methodology. 
 
 \subsubsection{Common Approaches: Key-point Detection}
 \label{subsubsec:keypoint}
-As discussed earlier, on-screen locations of key pitch markings are required to allow homography estimation to be applied. Computer vision models are commonly used for this as well. Offline systems often use encoder–decoder architectures, which estimate pitch key locations by compressing image features into a latent representation and then decoding this representation to produce precise key-point predictions \cite{Chu_2022_CVPR}. More recently, YOLO-based pose detection models have been applied \cite{Maji_2022_CVPR}, utilising their single-pass architecture to enable low-latency key-point estimation. Table \ref{tab:yolo11_pose_tradeoff} displays some common models discussed in literature. As with before, latency comparisons are not feasible due to benchmarking differences across the literature.
+Alongside player and ball locations, on-screen locations of key pitch markings are required to allow higher level statistics to be generated, and can also be estimated using computer vision models. Offline systems often use encoder–decoder architectures, which approximate pitch key locations by compressing image features into a latent representation and then decoding this representation to produce precise key-point predictions \cite{Chu_2022_CVPR}. More recently, YOLO-based pose detection models have been applied \cite{Maji_2022_CVPR}, utilising the single-pass architecture to enable low-latency key-point estimation. Table \ref{tab:yolo11_pose_tradeoff} displays some common models discussed in literature.
 
 \begin{table}[H]
 \centering
@@ -170,43 +176,42 @@ As discussed earlier, on-screen locations of key pitch markings are required to 
 \midrule
 
 \textit{YOLO-Pose} \cite{Redmon_2016_CVPR, UltralyticsYOLO} & & & \\
+\hspace{1em} v8n-pose  & 48.7 & 3.3  & 8.9  \\
+\hspace{1em} v8s-pose  & 56.8 & 11.6 & 30.2 \\
 \hspace{1em} v11n-pose & 50.0 & 2.9  & 7.4  \\
 \hspace{1em} v11s-pose & 58.9 & 9.9  & 23.1 \\
 \hspace{1em} v11m-pose & 64.9 & 20.9 & 71.4 \\
-\hspace{1em} v8n-pose  & 48.7 & 3.3  & 8.9  \\
-\hspace{1em} v8s-pose  & 56.8 & 11.6 & 30.2 \\
+\hspace{1em} v26n-pose & 57.2 & 2.9  & 7.5  \\
+\hspace{1em} v26s-pose & 63.0 & 10.4 & 23.9 \\
+\hspace{1em} v26m-pose & 68.8 & 21.5 & 73.1 \\
 
 HRNet-W32 \cite{9052469} & 66.4 & 28.5 & 95.0 \\
 OpenPose-Light \cite{osokin2018lightweight_openpose} & 54.0 & 25.9 & 160.0 \\
 
 \bottomrule
 \end{tabular}
-\caption{Keypoint Detection Models}
+\caption{Keypoint detection models.}
 \label{tab:yolo11_pose_tradeoff}
 \end{table}
 
 
 
-Some classical, non-neural approaches also exist, which align on-screen edges with known pitch dimensions to project player positions into real-world coordinates without learned representations \cite{6516867}. While this enables significantly faster throughput and avoids the need for training data, performance is often sensitive to occlusion, inaccurate line detection, and changes in broadcast viewpoint or visual clutter, limiting robustness in real match conditions.
+Some classical, non-neural approaches also exist, which align lines detected on screen with known pitch dimensions to project player positions into real-world coordinates without learned models \cite{6516867}. While this enables significantly faster throughput and avoids the need for training data, performance is often sensitive to occlusion, inaccurate line detection, and changes in broadcast viewpoint or visual clutter, limiting robustness in real match conditions.
  
 \subsubsection{Common Approaches: Post-Inference and Statistic Generation}
 \label{subsubsec:postinference}
 With player bounding boxes and pitch keypoints established, post-inference processing is often applied to generate high-level match statistics. This typically involves three stages: team assignment, homography estimation, and statistic generation.
 
-\textbf{Team Assignment.} Once players are detected and tracked, they are assigned to one of two teams. This is commonly achieved through colour-based clustering applied to the jersey regions of each detected bounding box. K-means clustering is the most widely used approach, grouping players by the dominant colour of their cropped torso region into two clusters corresponding to the two teams, with goalkeepers often handled as a separate class due to their distinctive kit \cite{ZhengLiu2012ColorRecognition}. Mean shift clustering has also been applied as an alternative, offering automatic cluster count estimation at a higher computational cost \cite{ZhengLiu2012ColorRecognition}. The accuracy of team assignment is highly dependent on image quality and the degree of colour similarity between the two kits, with night matches or low-resolution broadcast footage presenting particular challenges.
+\textbf{Team Assignment.} Once players are detected and tracked, they are assigned to one of two teams. This is commonly achieved through colour-based clustering applied to the jersey regions of each detected bounding box. K-means clustering is the most widely used approach, grouping players by the dominant colour of their cropped torso region into two clusters corresponding to the two teams, with goalkeepers often handled as a separate class due to their distinctive kit \cite{ZhengLiu2012ColorRecognition}. Mean shift clustering has also been applied as an alternative, offering automatic cluster count estimation at a higher computational cost \cite{ZhengLiu2012ColorRecognition}. The accuracy of team assignment is highly dependent on image quality and the degree of colour similarity between the two kits, with night games or low-resolution broadcast footage presenting particular challenges.
 
 \textbf{Homography Estimation.} To express player positions in real-world pitch coordinates, a homography transformation is estimated between the on-screen image plane and a canonical top-down pitch representation. This is achieved by matching detected pitch keypoints such as penalty box corners, the centre circle, and midfield line intersections to their known positions on a standard pitch template \cite{dubrofsky2009homography}. The resulting homography matrix can then be applied to any pixel coordinate in the image to obtain the corresponding location on the pitch. The accuracy of this transformation is sensitive to the number and distribution of visible keypoints, and degrades when large portions of the pitch are occluded or outside the camera frame.
 
 \textbf{Statistic Generation.} With player identities, team assignments, and pitch-relative positions established across frames, a range of high-level statistics can be derived from the tracking history. Possession estimation is typically computed as the proportion of frames in which the ball is within a defined proximity threshold of a player from each team \cite{mradovic38_football_analysis_repo,hmzbo_football_analytics_dl_cv_repo}. Pass detection identifies ball ownership transitions between players of the same team, allowing pass completion rates and passing networks to be constructed. Player-level statistics such as distance covered and instantaneous speed can also be derived by integrating the displacement of each tracked identity across consecutive frames in pitch coordinates \cite{mradovic38_football_analysis_repo,hmzbo_football_analytics_dl_cv_repo}.
 
-\subsection{Literature Review: Current Limitations}
-Despite the rapid progress in computer vision for sports, several significant technical and operational hurdles remain unexplored for real-time edge deployment. As Table \ref{softwarestacks} displayed earlier, common models used today \cite{hmzbo_football_analytics_dl_cv_repo, yang2025soccermaster, mradovic38_football_analysis_repo, roboflow_sports_repo} are computationally intensive, demanding high-end GPU resources (e.g, NVIDIA A100 GPUs) that are typically unavailable on constrained edge devices like the Jetson Nano. Most systems are designed for batch frame processing, and often require 200+ of GFLOPS \cite{yang2025soccermaster, roboflow_sports_repo} and other systems, while feasible for real time, assume much more powerful infrastructure and still produce only 5-6 FPS on consumer hardware\cite{hmzbo_football_analytics_dl_cv_repo, mradovic38_football_analysis_repo}. This leads to systems and software unsuitable for edge deployment without first applying optimisation or compression. 
-
-
 \subsection{Literature Review: Modern YOLO Architecture}
 \label{lit:yolo}
 
-Recent YOLO detectors, such as the Ultralytics YOLO11 and Ultralytics YOLO26 families, generally follow a backbone-neck-head design \cite{UltralyticsYOLO}. In this, the backbone extracts features from the image at increasing levels of abstraction. The neck then combines these various features so that both fine spatial detail and higher-level semantic information can be used by the detection head. To do so, the backbone utilises a variety of convolutional layers (Conv) and variations of CSP bottlenecks with 3 convolutions (C3K2). The neck uses upsampling, concatenation, and C3K2 blocks, allowing the head to produce predictions at three resolutions, corresponding broadly to small, medium, and large objects \cite{UltralyticsYOLO}. A simplified version of this architecture is displayed below in Figure \ref{fig:yolo11_architecture}.
+As YOLO models are regularly used fro object detection and keypoint localisation, a higher review of these is warranted. Recent YOLO detectors, such as the Ultralytics YOLO11 and Ultralytics YOLO26 families, generally follow a backbone-neck-head design \cite{UltralyticsYOLO, unknown}. In this, the backbone extracts image features at increasing levels of abstraction, while the neck combines them so that both fine spatial detail and higher-level semantic information can be used by the detection head. To do so, the backbone utilises a variety of convolutional layers (labelled Conv below) and variations of CSP bottlenecks with 3 convolutions (labelled C3K2 below). The neck uses upsampling, concatenation, and C3K2 blocks, allowing the head to produce predictions at three resolutions, corresponding broadly to small, medium, and large objects \cite{UltralyticsYOLO, unknown}. A simplified version of this architecture is displayed below in Figure~\ref{fig:yolo11_architecture}.
 
 
 \begin{figure}[H]
@@ -217,16 +222,16 @@ Recent YOLO detectors, such as the Ultralytics YOLO11 and Ultralytics YOLO26 fam
 \end{figure}
 
 
-This structure provides an efficient way to scale model size based on user needs. Five variants have been defined (Nano (n), Small (s), Medium (m), Large (l), Extra-Large (x)), which utilise the same architecture, but vary in their depth and width scaling, and therefore in parameter count and computational complexity \cite{UltralyticsYOLO}. A practical consequence of this architecture is that YOLO models require input dimensions to be exact multiples of 32, imposed by the cumulative stride of the backbone and neck downsampling stages, which must be accounted for when selecting input resolutions for deployment \cite{UltralyticsYOLO}.
+This structure provides an efficient way to scale model size based on user needs. Five variants have been defined (Nano (n), Small (s), Medium (m), Large (l), Extra-Large (x)), which utilise the same architecture, but vary in the depth and width scaling of the C3K2 and Conv blocks, and therefore in parameter count and computational complexity \cite{UltralyticsYOLO, unknown}. One practical and relevant consequence of this architecture is that YOLO models require input dimensions to be exact multiples of 32, due to the cumulative stride of the backbone and neck downsampling stages. This must be accounted for when selecting input resolutions for deployment \cite{UltralyticsYOLO}.
 
 \subsubsection{YOLO11 vs. YOLO26 Architecture}
 
-The newer YOLO26 family differs from YOLO11 through a series of incremental modifications \cite{UltralyticsYOLO}. Architecturally, YOLO26 introduces a new shortcut connection within the neck to improve feature flow through the network, and a new attention mechanism in the final C3k2 stage before detection to place greater emphasis on informative spatial feature. In the detection pipeline, YOLO11 utilises distribution focal loss for box regression, whereas YOLO26 instead uses direct box regression and an Non-Maximum-Suppression-free framework. YOLO26 also incorporates Progressive Loss Balancing, small target aware labelling, and a more stable optimisation strategy (MuSGD). These changes indicate that YOLO26 is more focused towards stable training and small-object performance than YOLO11, but the high-level architecture remains largely unchanged \cite{UltralyticsYOLO}.
+The YOLO26 family differs from YOLO11 through a series of incremental modifications \cite{UltralyticsYOLO}, instead of through drastic architectural changes. YOLO26 introduces a new shortcut connection within the neck to improve feature flow through the network, and a new attention mechanism in the final C3k2 stage before detection to place greater emphasis on informative spatial feature. In the detection pipeline, YOLO11 utilises distribution focal loss for box regression, whereas YOLO26 instead uses direct box regression and an Non-Maximum-Suppression-free framework. YOLO26 also incorporates Progressive Loss Balancing, small target aware labelling, and a more stable optimisation strategy (MuSGD). These changes indicate that YOLO26 is more focused towards stable training and small-object performance than YOLO11, but the high-level architecture remains largely unchanged \cite{UltralyticsYOLO}.
 
 \subsection{Literature Review: Edge Deployment Hardware}
 \label{lit:edge_hardware}
 
-Edge applications of computer vision models often utilise specialised hardware platforms designed for efficient on-device inference. These typically include parallelised GPUs designed for matrix operations, as well as high memory bandwidth and support for specialised frameworks such as PyTorch, TensorRT, CUDA, and ONNX \cite{xu2025edge}. A range of these devices exist with varying price points, allowing for different levels of performance and cost trade-offs. Table \ref{tab:edge_devices} below summarises some of the most commonly used edge devices for computer vision applications, along with their key specifications and price points.
+Following this review of common approaches, it is useful to summarise common embedded edge devices used for other computer vision purposes. These devices often utilise specialised hardware platforms designed for efficient on-device inference. They typically include parallelised GPUs designed for matrix operations, as well as high memory bandwidth and support for specialised frameworks such as PyTorch, TensorRT, CUDA, and ONNX \cite{xu2025edge}. A range of these devices exist with varying price points, which allow for different levels of performance and cost trade-offs based on consumer needs. Table \ref{tab:edge_devices} below summarises some of the most commonly used edge devices for computer vision applications, along with their key specifications and price points.
 
 \begin{table}[H]
     \centering
@@ -248,28 +253,32 @@ Edge applications of computer vision models often utilise specialised hardware p
     \label{tab:edge_devices}
 \end{table}
 
-As shown, these devices range from extremely low-cost, low-performance options to high-end systems that are more comparable to traditional desktop platforms, while retaining a strong emphasis on GPU and RAM performance. Overall, cost and GPU performance are positively correlated, with real-time edge deployment of one or two small models being feasible on devices such as the NVIDIA Jetson Nano, Jetson Orin Nano, and Jetson AGX Orin, offering a cheap entry point for real-time soccer analysis.
+As shown, these devices range from extremely low-cost, low-performance options to high-end systems that are more comparable to traditional desktop platforms, while retaining a strong emphasis on GPU and RAM performance. Overall, cost and GPU performance are positively correlated, with real-time edge deployment of one or two small models being feasible on devices such as the NVIDIA Jetson Nano, Jetson Orin Nano, and Jetson AGX Orin. However, even the higher-end Jetson Orin Nano provides only a 1024-core Ampere GPU and 8~GB of RAM: substantially below the hardware that some existing soccer analysis systems implicitly assume. This suggests that current models cannot be deployed on these devices without significant optimisation.
+
+\subsection{Literature Review: Current Limitations}
+Despite the rapid progress in computer vision for sports, several significant technical and operational hurdles remain unexplored for real-time edge deployment. As Tables \ref{softwarestacks}, \ref{modelparams}, and \ref{tab:yolo11_pose_tradeoff} displayed earlier, common models used today \cite{hmzbo_football_analytics_dl_cv_repo, yang2025soccermaster, mradovic38_football_analysis_repo, roboflow_sports_repo} are computationally intensive and would require high-end GPU resources (e.g., NVIDIA A100 GPUs) that are typically unavailable on constrained edge devices. As shown in Table~\ref{tab:edge_devices}, even a mid-range candidate such as the Jetson Nano Orin provides only a 1024-core Maxwell GPU and 8~GB of RAM, making the computation demanded by common pipelines currently infeasible. Most systems are designed for batch frame processing, requiring 200+ GFLOPS per inference \cite{yang2025soccermaster, roboflow_sports_repo}. Those that may support real-time operation still produce only 5--6 FPS on consumer hardware \cite{hmzbo_football_analytics_dl_cv_repo, mradovic38_football_analysis_repo}. This leads to systems and software unsuitable for edge deployment without first applying optimisation or compression. 
+
 
 
 \subsection{Literature Review: Compression Techniques}
 
-A range of model compression techniques designed to reduce the computational and memory requirements of deep learning models (while preserving acceptable analytical performance) have been explored in literature. Although these techniques have not yet been widely applied to end-to-end football statistic generation systems, they will form a strong foundation for deploying real-time soccer analysis pipelines on edge devices.
+As warrented by the Current Limitations, a range of model compression techniques designed to reduce the computational and memory requirements of deep learning models while preserving acceptable analytical performance have been explored in literature. Although these techniques have not yet been widely applied to end-to-end football statistic generation systems, they will form a strong foundation for deploying real-time soccer analysis pipelines on edge devices.
 
 
-\subsubsection{Efficiency Techniques: Hardware Acceleration}
+\subsubsection{Compression Techniques: Hardware Acceleration}
 
 Hardware acceleration improves inference efficiency by executing neural networks through runtimes and software stacks that are specifically optimised for the target hardware platform \cite{tensorrt}. Rather than relying on a default framework execution path, accelerated backends can apply graph-level optimisations, fuse operations, select more efficient kernels, and better exploit GPU parallelism. This is particularly important in real-time computer vision, where inference latency directly affects whether a system can operate at interactive or live processing speeds.
 
-A common approach to hardware acceleration in embedded and GPU-based deep learning systems is the use of optimised inference runtimes such as TensorRT. These frameworks convert trained models into deployment-ready representations that are tailored to the hardware on which inference will be performed. By moving much of the optimisation work offline, such approaches reduce runtime overhead and improve throughput, making them especially valuable in edge settings where compute and power budgets are constrained.
+A common approach to hardware acceleration in embedded and GPU-based deep learning systems is the use of optimised inference runtimes such as TensorRT \cite{tensorrt}. These frameworks convert trained models into deployment-ready checkpoints that are tailored to the hardware on which inference will be performed. These approaches often reduce runtime overhead and improve throughput, making them especially valuable in edge settings where compute and power budgets are constrained. Figure~\ref{fig:hardware_acceleration_lit} illustrates the typical effect of hardware acceleration on inference execution time \cite{tensorrt}.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\linewidth]{images/628b6d9a-fb26-4df1-bafa-aab8cca775f1.png}
-    \caption{Effect of \texttt{tensorrt} application on inference time.}
+    \includegraphics[width=0.85\linewidth]{images/628b6d9a-fb26-4df1-bafa-aab8cca775f1.png}
+    \caption{Effect of \texttt{tensorrt} Application on Inference Time \cite{tensorrt}.}
     \label{fig:hardware_acceleration_lit}
 \end{figure}
 
-Figure~\ref{fig:hardware_acceleration_lit} illustrates the typical effect of hardware acceleration on inference execution time \cite{tensorrt}. As can be seen, optimised TensorRT-based pipelines consistently reduce latency relative to the default PyTorch implementation, with similar trends also observed for ONNX-based accelerated deployment. This demonstrates that hardware acceleration can provide substantial efficiency improvements without altering the underlying model task, making it an important optimisation strategy in the deployment of real-time computer vision systems.
+ As can be seen, optimised TensorRT-based variants consistently reduce latency relative to the default PyTorch implementation of the same model, with similar trends also observed for ONNX-based accelerated deployment. This demonstrates that hardware acceleration can provide substantial efficiency improvements, making it a likely important compression strategy in the deployment of real-time computer vision systems.
 
 
 \subsubsection{Compression Techniques: Quantisation}
@@ -278,7 +287,7 @@ Quantisation is one of the most widely adopted compression techniques, and invol
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\linewidth]{images/quantization.png}
+    \includegraphics[width=0.75\linewidth]{images/quantization.png}
     \caption{Effect of Quantisation of Model Energy Consumption \cite{inbook}}
     \label{fig:quantlit}
 \end{figure}
@@ -298,20 +307,26 @@ Pruning strategies are divided into unstructured and structured approaches. Unst
     \label{fig:pruninglit}
 \end{table}
 
-As can be seen, applying the X-Pruner algorithm reduces the required FLOPS by 28\%, with only a .5\% reduction in accuracy (Top-1). For this reason, pruning will be explored as a method of compressing soccer computer vision models used in this work. 
+As can be seen, applying the pruning algorithm reduces the required FLOPS by 28\%, with only a .5\% reduction in accuracy (Top-1). For this reason, pruning will be explored as a method of compressing soccer computer vision models used in this work. 
 
 \subsubsection{Compression Techniques: Input Resolution Scaling}
-Input resolution scaling reduces computational and memory footprints by lowering the spatial dimensions of the images or tokens processed by a model. Since the complexity of Convolutional Neural Networks and Vision Transformers typically scales quadratically with input resolution, even modest downsizing can yield substantial improvements in inference throughput and energy efficiency \cite{morlier2025input}. Figure \ref{fig:inputreslit} displays model characteristics (FLOPS and memory usage) before and after input resolution scaling is applied. 
+Input resolution scaling reduces computational and memory footprints by lowering the spatial dimensions of the input images processed by a model. Since the complexity of Convolutional Neural Networks and Vision Transformers typically scales quadratically with input resolution, even modest downsizing can yield substantial improvements in inference throughput and energy efficiency \cite{morlier2025input}. Figure \ref{fig:inputreslit} displays model FLOPS and memory usage before and after input resolution scaling is applied. 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\linewidth]{images/inputresresearch.png}
-    \caption{Required Memory Vs. FLOPS when Input Resolution Scaling is Applied \cite{morlier2025input}}
+    \includegraphics[width=0.7\linewidth]{images/inputresresearch.png}
+    \caption{Effect of Input Resolution on Memory and FLOPS \cite{morlier2025input}}
     \label{fig:inputreslit}
 \end{figure}
 
 
-As can be seen by Figure \ref{fig:inputreslit}, applying input resolution scaling often reduces the required FLOPS by $\sim$2x, with slight improvements in required memory. However, this technique may introduce a major accuracy/efficiency trade-off, as reducing resolution compromises the detection of small objects \cite{morlier2025input, zheng2025_review_football_cv}. In the soccer domain, where the ball often occupies fewer than 100 pixels, resolution is a primary determinant of performance; for instance, increasing resolution from 640px to 1200px has been shown to improve ball detection recall by up to 96\% \cite{10756443}. To mitigate these losses, implementations often utilise training-evaluation discrepancies, training models on smaller resized crops but evaluating at slightly higher resolutions to recover analytical performance \cite{morlier2025input}.
+As can be seen by Figure \ref{fig:inputreslit}, applying input resolution scaling often reduces the required FLOPS by $\sim$2x, with slight improvements in required memory. However, this technique may introduce a major accuracy/efficiency trade-off, as reducing resolution compromises the detection of small objects \cite{morlier2025input, zheng2025_review_football_cv}. In the soccer domain, where the ball often occupies fewer than 100 pixels, resolution is a primary determinant of performance; for instance, increasing resolution from 640px to 1200px has been shown to improve ball detection recall by up to 96\% \cite{10756443}. 
 
 \subsubsection{Compression Techniques: Knowledge Distillation}
-Knowledge distillation is another model compression technique, in which a compact "student" model is trained to replicate the performance of a high-capacity "teacher" model. Unlike standard training, the student is optimised using softened output distributions (logits) or intermediate feature representations produced by the teacher, which contain richer information than hard ground-truth labels \cite{Kaleem2024ACR, inbook}. Knowledge transfer can be categorised into three types: response-based, which focuses on the final output probabilities; feature-based, which aims to mimic the teacher's internal feature maps to capture implicit patterns; and relation-based, which teaches the student the relationships between different data samples or layers \cite{Kaleem2024ACR}. 
+Knowledge distillation is the final model compression technique to be explored, in which a compact "student" model is trained to replicate the performance of a high-capacity "teacher" model. Unlike standard training, the student is optimised using softened output distributions (logits) or intermediate feature representations produced by the teacher, which contain richer information than hard ground-truth labels \cite{Kaleem2024ACR, inbook}. Knowledge transfer can be categorised into three types \cite{Kaleem2024ACR}:
+\begin{itemize}
+    \item Response-based, which focuses on the final output probabilities of the teacher model.
+    \item Feature-based, which aims to mimic the teacher's internal feature maps to capture implicit patterns.
+    \item Relation-based, which teaches the student the relationships between different data samples or layers.
+\end{itemize}
+Two commonly applied feature-based approaches are Channel-Wise Distillation, which normalises teacher and student feature maps channel-wise before computing the distillation loss, and Masked Generative Distillation, which randomly masks regions of the student’s features and trains a generation function to reconstruct the teacher’s full feature maps \cite{Kaleem2024ACR}. Channel-Wise Distillation therefore focuses on direct alignment of feature responses, whereas Masked Generative Distillation encourages the student to infer missing structure and thereby learn richer internal representations.

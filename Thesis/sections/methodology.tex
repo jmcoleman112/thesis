@@ -1,18 +1,18 @@
 % !TeX root = ../main.tex
 \section{Methodology}
 \label{sec:methodology}
-This section describes the training, compression, and evaluation procedures followed in this work, covering the training of baseline object detection and keypoint estimation models, the application of compression techniques, and the design and evaluation of the full-stack soccer analysis system.
+Building on the models, compression techniques, and edge hardware identified in the Background Literature Review, this section describes the training, compression, and evaluation procedures followed in this work. Specifically, it covers the training of baseline object detection and keypoint estimation models, the application of the compression techniques identified in the literature, and the design and evaluation of the full-stack soccer analysis system.
 
 \subsection{Model Training Procedure}
 \label{subsec:training}
 
-To support fair comparison, all object detection and keypoint estimation models were trained under a standardised procedure. Training was initialised from COCO-pretrained weights \cite{lin2015microsoftcococommonobjects} to leverage transfer learning from a large general-purpose dataset, accelerating convergence and improving generalisation on the smaller football-specific datasets used here. All models were trained in PyTorch and saved as \verb|.pt| checkpoints prior to compression. Training used an input resolution of $1280 \times 1280$ px to match the resolution of the football broadcast datasets used, a batch size of 32, and was conducted on the UCD high-performance cluster \textit{UCDSonic}. Optimisation used stochastic gradient descent with an initial learning rate of 0.01, momentum 0.937, and weight decay $5\times10^{-4}$ \cite{ultralytics_cfg}. Training ran for up to 500 epochs with a 3-epoch warm-up schedule and early stopping patience of 60 epochs, with 80\% of each dataset used for training and 20\% held out for validation.
+To support fair comparison, all object detection and keypoint estimation models were trained under a standardised procedure. Training was initialised from COCO-pretrained weights \cite{lin2015microsoftcococommonobjects} to leverage transfer learning from a large general-purpose dataset, accelerating convergence and improving generalisation on the smaller football-specific datasets used here. All models were trained in PyTorch and saved as \verb|.pt| checkpoints prior to compression. Training used an input resolution of $1280 \times 1280$ px to match the resolution of the football broadcast datasets used, a batch size of 32, and was conducted on the UCD high-performance cluster \textit{UCDSonic}. Weight optimisation used stochastic gradient descent with an initial learning rate of 0.01, momentum 0.937, and weight decay $5\times10^{-4}$ \cite{ultralytics_cfg}. Training ran for up to 500 epochs with a 3-epoch warm-up schedule and early stopping patience of 60 epochs, with 80\% of each dataset used for training and 20\% held out for validation.
 
 An initial benchmarking study was performed to identify the most suitable model family for the remainder of the work, based on analytical performance and hardware usage. A separate preliminary study was then conducted to determine the most suitable dataset for the full object detection study, in which 10 model variants were trained under identical conditions and evaluated across three labelled football broadcast datasets: SoccerNet \cite{tracking}, Roboflow \cite{roboflow_sports_repo}, and Football Analytics \cite{roboflow_football_analytics_gnykk_model1}. For pitch keypoint detection, the Roboflow football field dataset \cite{roboflow_football_field_detection_f07vi_dataset15} was used throughout.
 
 \subsection{Compression}
 
-As discussed in the Literature Review, five chief compression techniques have been explored, alongside combinations of these techniques: hardware acceleration, quantisation, input resolution scaling, knowledge distillation, and pruning. Figure \ref{fig:compressionplan} below displays the various combinations of compression techniques applied. 
+Drawing on the compression techniques identified in the Literature Review, five approaches have been explored in this work, alongside combinations of these techniques: hardware acceleration, quantisation, input resolution scaling, knowledge distillation, and pruning. Figure \ref{fig:compressionplan} below displays the various compression techniques and combinations of techniques applied. 
 
 \begin{figure}[H]
   \centering
@@ -22,43 +22,41 @@ As discussed in the Literature Review, five chief compression techniques have be
 \end{figure}
 
 
-This structure allows both individual techniques and their combined variants to be evaluated, enabling the relative contribution of each method to be isolated and the degree to which performance gains compound when techniques are stacked to be assessed.
+This structure allows both individual techniques and their combined variants to be evaluated, allowing the both relative contribution of each method to be isolated, and the way in which gains/losses combine when techniques are stacked to be assessed.
 \subsubsection{Hardware Acceleration}
-To implement hardware acceleration without introducing other modifications, each trained PyTorch model was exported to a TensorRT \texttt{.engine} file in its native precision size (FP32) and input resolution (1280×1280 px). Although FP32 retains full numerical precision, the TensorRT export still applies graph-level optimisations including layer fusion, kernel selection, and improved memory scheduling, which reduce inference latency without altering model behaviour. This process is hardware-specific and therefore must be performed on the target platform. This also limits the models' portability to other hardware.
+To implement hardware acceleration, each trained PyTorch model was exported on the NVIDIA Jetson Orin Nanoto a hardware specificTensorRT \texttt{.engine} file in its native precision size (FP32) and input resolution (1280×1280 px). This export applies graph-level optimisations including layer fusion, kernel selection, and improved memory scheduling, which reduce inference latency without altering model behaviour. This process is hardware-specific and therefore must be performed on the target platform. This therefore limits the models' portability to other hardware.
 
 As the literature review indicated that hardware acceleration often offers significant improvement in hardware efficiency with no analytical loss, this method was applied to all PyTorch-based \verb|.pt| models when available. This includes uncompressed, pruned, distilled, and resolution-scaled variants, as well as all combinations of these techniques. 
 
 \subsubsection{Quantisation}
 
-Similar to hardware acceleration, FP16 and INT8 quantisation were implemented through post-training export of trained PyTorch checkpoints to TensorRT \texttt{.engine} files, but with reduced numerical precision applied to weights and activations. Post-training quantisation was used rather than quantisation-aware re-training for two reasons: it ensures a fair comparison by isolating the effect of precision reduction from any changes introduced during additional training, and it avoids the substantial computational cost that re-training the full model inventory at lower precision would have required. As with hardware acceleration, exports were performed at a fixed input resolution of 1280$\times$1280 px. For INT8 engine generation, a calibration dataset drawn from the training split was provided during export to estimate representative activation ranges. Without calibration, the quantised engine has no basis for determining how to map the full FP32 activation distribution into the narrower INT8 range, which can result in significant clipping and accuracy loss \cite{nvidia_modelopt}.
+Similar to hardware acceleration, FP16 and INT8 quantisation were implemented through post-training export of trained PyTorch checkpoints to TensorRT \texttt{.engine} files, but with reduced numerical precision applied to weights and activations. Post-training quantisation was used rather than quantisation-aware re-training for two reasons: it allows the effect of precision reduction to be evaluated without the results being influenced by differences in training results, and it avoids the substantial computational cost that re-training the full model inventory at lower precision would have required. As with hardware acceleration, exports were performed at a fixed input resolution of 1280$\times$1280 px. For INT8 engine generation, a calibration dataset drawn from the training split was provided during export to estimate representative activation ranges. Without calibration, the quantised engine has no basis for determining how to map the full FP32 activation distribution into the narrower INT8 range, which can result in significant clipping and accuracy loss \cite{nvidia_modelopt}.
 
 As with hardware acceleration, literature suggests that quantisation (and especially FP16 quantisation) can often be applied with minimal analytical loss and significant latency improvements, and so this method was applied to all PyTorch-based \verb|.pt| models when available, including all pruned, distilled, and resolution-scaled variants, as well as all combinations of these techniques.
 
 \subsubsection{Input Resolution Scaling}
 Input resolution scaling was also implemented through the post-training export process to TensorRT \texttt{.engine} files \cite{tensorrt}, maintaining the same native FP32 precision but reducing the input size of the model. This was chosen rather than re-training models at different resolutions for the same reasons as with quantisation: fairness of comparison and to maintain a sustainable methodology. 
 
-As model training was standardised at $1280 \times 1280$ px, input resolution scales of 75\%, 60\%, and 50\% were chosen. 50\% was selected as many computer vision models are trained at this resolution, and so it is a common default for real-time applications. 75\% and 60\% were then selected to provide a more gradual scaling curve. As mentioned in the literature review (Section \ref{lit:yolo}) YOLO models require input dimensions to be multiples of 32 due to the stride of the detection head, and so the selected resolutions of $1280 \times 1280$ px, $960 \times 960$ px (75\%), $768 \times 768$ px (60\%), and $640 \times 640$ px (50\%) were selected with this in mind.
+As model training was standardised at $1280 \times 1280$ px, input resolution scales of 75\%, 60\%, and 50\% were chosen. 50\% (equivalent to $640\times640$ px) was selected as many computer vision models are trained at this resolution, and so it is a common default for real-time applications. 75\% and 60\% were then selected to provide a gradual scaling curve for comparison. As mentioned in the literature review (Section \ref{lit:yolo}) YOLO models require input dimensions to be multiples of 32 due to the stride of the detection head, and so the selected resolutions of $1280 \times 1280$ px, $960 \times 960$ px (75\%), $768 \times 768$ px (60\%), and $640 \times 640$ px (50\%) were carefully selected to comply with this.
 
 \subsubsection{Pruning}
-Pruning was implemented as structured channel pruning using NVIDIA ModelOpt FastNAS \cite{248452, nvidia_modelopt}. This approach searches for a reduced channel configuration under an explicit FLOP constraint, producing smaller and more efficient network variants while preserving a deployment-compatible architecture. Trained YOLO checkpoints were pruned to FLOP retention levels of 90\%, 80\%, and 70\%. This range was selected to span a range of productive retention levels indicated by literature \cite{10204354}. Following pruning, fine-tune training was applied under the same procedure as the uncompressed models but limited to 100 epochs, which was sufficient to recover most of the accuracy lost during pruning while remaining computationally sustainable and time-reasonable across the full model inventory. Structured pruning was used in preference to unstructured weight pruning as it preserves dense tensor operations and standard layer structures, which are more readily accelerated by inference frameworks such as TensorRT \cite{nvidia_modelopt}. Note that pruning could not be applied to all model variants, as aggressive channel removal in certain architecture and task combinations caused training instability during fine-tuning, likely due to the removal of feature channels critical to localisation.
+Pruning was implemented as structured channel pruning using NVIDIA ModelOpt FastNAS \cite{248452, nvidia_modelopt}. This approach searches for a reduced channel configuration under an explicit FLOP constraint, producing smaller and more efficient network variants while attempting to preserve a deployment-compatible architecture. Trained YOLO checkpoints were pruned to FLOP retention levels of 90\%, 80\%, and 70\%. This range was selected to span a range of productive retention levels indicated in the literature above \cite{10204354}. Following pruning, fine-tune training was applied under the same procedure as the uncompressed models but limited to 100 epochs, which was mainly chosen to be computationally sustainable and time-reasonable across the full model inventory. Structured pruning was used in preference to unstructured weight pruning as it preserves dense tensor operations and standard layer structures, which are more readily accelerated by inference frameworks such as TensorRT \cite{nvidia_modelopt}. Note that pruning could not be applied to all model variants, as aggressive channel removal in certain architecture and task combinations caused training instability during fine-tuning, likely due to the removal of feature channels critical to localisation. This will be discussed more in depth in the Results and Discussion sections below.
 
 \subsubsection{Knowledge Distillation}
-Knowledge distillation was implemented as a teacher--student training strategy, in which a smaller YOLO student model was trained using both the standard detection loss and a CWD distillation loss computed against the intermediate feature maps of a larger, fixed teacher model \cite{Kaleem2024ACR}. Lightweight alignment layers were used where teacher and student feature dimensions differed. The distillation loss was weighted by a decaying schedule to place greater emphasis on teacher guidance early in training before shifting focus towards the student's own detection objective.
+Knowledge distillation was implemented as a feature based teacher--student training strategy, in which a smaller YOLO student model was trained using both the standard detection loss and a channel width distillation loss computed against the intermediate feature maps of a larger, fixed teacher model \cite{Kaleem2024ACR}. Lightweight alignment layers were used where teacher and student feature dimensions differed. The distillation loss was weighted by a decaying schedule to place greater emphasis on teacher guidance early in training before shifting focus towards the student's own detection objective. Channel-Wise Distillation was used as the feature-level distillation loss as this encourages the student model to mimic the teacher's internal feature responses at corresponding stages, helping it learn more informative representations than from ground-truth labels alone  \cite{Kaleem2024ACR, make5040083}.
 
-Channel-Wise Distillation was used as the feature-level distillation loss \cite{Kaleem2024ACR, make5040083}. This encourages the student model to mimic the teacher's internal feature responses at corresponding stages, helping it learn more informative representations than from ground-truth labels alone.
-
-For results analysis, teacher--student pairings were defined by the gap in scale between the two models: a small jump denotes one scale step between student and teacher (e.g. N$\rightarrow$S), a medium jump denotes two steps (e.g. N$\rightarrow$M), and a large jump denotes three or more steps (e.g. N$\rightarrow$L or beyond).
+For results analysis later, teacher--student distance was defined by the gap in scale between the two models: a small jump denotes one scale step between student and teacher (e.g. N$\leftarrow$S or S$\leftarrow$M), a medium jump denotes two steps (e.g. N$\leftarrow$M or S$\leftarrow$L), and a large jump denotes three or more steps (e.g. N$\leftarrow$L or beyond).
 
 
  \subsection{Analytical Performance Metrics}
 
-For both object detection and keypoint localisation, model accuracy was evaluated using the $\mathrm{mAP}_{50\text{--}95}$ metric on a held-out validation subset \cite{Everingham2010}. This metric averages Average Precision (AP) across ten thresholds from 0.50 to 0.95 in increments of 0.05, making it a stricter and more comprehensive measure than evaluating at a single threshold such as $\mathrm{mAP}_{50}$.
+For both object detection and keypoint localisation, model accuracy was evaluated using the $\mathrm{mAP}_{50\text{--}95}$ metric on a held-out validation subset \cite{Everingham2010}. This metric averages average precision (AP) across ten thresholds from 0.50 to 0.95 in increments of 0.05, making it a stricter and more comprehensive measure than evaluating at a single threshold such as $\mathrm{mAP}_{50}$.
 
-For object detection, the threshold at each step utilises Intersection over Union (IoU), which quantifies the overlap between a predicted bounding box and its ground truth. For keypoint localisation, IoU is replaced by Object Keypoint Similarity (OKS), which evaluates predicted keypoint accuracy by computing the Euclidean distance between each predicted and ground truth keypoint, normalised by the scale of the object \cite{Everingham2010}. Note that OKS normally includes a parameter $\sigma_i$, that defines a per-keypoint localisation tolerance. In tasks such as human pose estimation, $\sigma_i$ is typically used to reflect that some anatomical keypoints are inherently harder to localise precisely than others, such as hip placement or spine location. In this work, a uniform $\sigma$ value was used for all keypoints, meaning that the same tolerance was applied to every pitch landmark rather than assigning different tolerances to different keypoint types. 
+For object detection, the threshold at each step is an Intersection over Union (IoU) threshold, which quantifies the overlap between a predicted bounding box and its corresponding ground truth. For keypoint localisation, IoU is replaced by Object Keypoint Similarity (OKS), which evaluates predicted keypoint accuracy by computing the Euclidean distance between each predicted and ground truth keypoint, normalised by the scale of the object \cite{Everingham2010}. Note that OKS normally includes a parameter $\sigma_i$, that defines a per-keypoint localisation tolerance. In tasks such as human pose estimation, $\sigma_i$ is typically used to reflect that some anatomical keypoints are inherently harder to localise precisely than others, such as hip placement or spine location versus an easy to localise elbow. In this work, a uniform $\sigma$ value was used for all keypoints, meaning that the same tolerance was applied to every pitch landmark rather than assigning different tolerances to different keypoint types. 
 
 Mean Euclidean pixel error was also recorded as a secondary metric for keypoint localisation in the results, but it was found that the correlation between this and $\mathrm{mAP}_{50\text{--}95}$ was very high (Spearman $\rho=.97$), and so $\mathrm{mAP}_{50\text{--}95}$ was selected as the primary metric for consistency with object detection.
 
-For full-stack temporal analysis, the metric $\mathrm{mAP}_{1\text{--}5}$ was used for pass detection, where predictions were matched to ground-truth pass events using temporal tolerances of 1 to 5 seconds rather than spatial thresholds, allowing performance to be assessed under increasing levels of timing strictness.
+For full-stack temporal analysis utilising video rather than images, the metric $\mathrm{mAP}_{1\text{--}5}$ was used for pass detection, where predictions were matched to ground-truth pass events using temporal tolerances of 1 to 5 seconds rather than spatial thresholds, allowing performance to be assessed under increasing levels of timing strictness.
 
 \subsection{Jetson Orin Nano Set-up}
 
@@ -86,62 +84,66 @@ MAXN$^\dagger$ & 6 & 1728.0 & 1020 & 3199 \\
 \end{table}
 
 
-For this work, the MAXN mode without a fixed power limit (shaded in yellow) was selected, as it allows the GPU, CPU, and external memory controller (EMC) to operate at their maximum clock speeds, which maximises throughput. The external memory controller manages data transfer from the GPU/CPU to the system RAM. To reduce overhead, the device was also configured to run in headless mode without a graphical user interface and accessed remotely via SSH. Note that, as a trade-off, using th MAXN configuration likely resulted in higher power draw and temperature, but initial experiments indicated that latency would be the primary bottleneck rather than power consumption or temperature.
+For this work, the MAXN mode without a fixed power limit (shaded in yellow) was selected, as it allows the GPU, CPU, and external memory controller (EMC) to operate at their maximum clock speeds, which maximises throughput. Note that the external memory controller manages data transfer from the GPU/CPU to the system RAM. To reduce overhead, the device was also configured to run in headless mode without a graphical user interface, and was accessed remotely via SSH. Note that, as a trade-off, using the MAXN configuration likely resulted in higher power draw and temperature, but initial experiments indicated that latency would be the primary bottleneck rather than power consumption or temperature.
 
 
 \subsection{Hardware Benchmarking Protocol}
 
-Hardware usage was assessed using GPU utilisation, power draw, and device temperature, chosen for their relevance to the Jetson Orin Nano's constraints of an 85$^\circ$C thermal limit, a 25\,W power budget, and slightly limiting 1024-core CUDA GPU \cite{JetsonOrinNano}. All telemetry was sampled every 200\,ms using NVIDIA's \verb|tegrastats| command.
+Hardware usage was assessed using GPU utilisation, power draw, and device temperature, chosen for their relevance to the Jetson Orin Nano's constraints of an 85$^\circ$C thermal limit, a 25\,W power budget, and slightly limiting 1024-core CUDA GPU \cite{JetsonOrinNano}. All telemetry was sampled every 200\,ms using NVIDIA's native \verb|tegrastats| command.
 
-Benchmarking was performed in two formats, each targeting a distinct purpose. For full-stack evaluation, a continuous soccer match video was processed for 600\,s with the complete pipeline active (object detection, keypoint estimation, and post-inference processing). Note that the visualisation endpoint was disabled to avoid overhead due to video rendering. This provides a realistic assessment of end-to-end system performance under operating conditions, but cannot isolate the contribution of individual models from the pipeline. For individual model evaluation, a fixed image set was processed in a continuous inference loop for 240\,s, with the first five warm-up inferences discarded, ensuring the device remained under sustained load throughout the sampling window. This format enables direct comparison of hardware usage and latency across model variants in isolation, without overhead introduced by the full-stack system.
+Benchmarking was performed in two formats, each targeting a distinct purpose. For full-stack evaluation, a continuous soccer match video was processed for 600\,s with the complete pipeline active (object detection, keypoint estimation, and post-inference processing). Note that the visualisation endpoint was disabled to avoid overhead due to video rendering. This provides a realistic assessment of end-to-end system performance under operating conditions, but cannot isolate the contribution of individual models from the pipeline. For individual model evaluation, a fixed image set was processed in a continuous inference loop for 240\,s, with the first five warm-up inferences discarded, ensuring the device remained under sustained load throughout the sampling window. This second format enables direct comparison of hardware usage and latency across model variants in isolation, without overhead introduced by the full-stack system.
 
 
 \subsection{Post-Processing and Higher-level Statistic Generation}
 \label{subsec:postprocessing}
 
-Following model inference, a post-inference pipeline was applied to generate higher-level football analytics. Through this pipeline, object identities, pitch-referenced player locations, team assignments, ball possession, pass events, and player speed estimates could be derived from the raw detector outputs.
+Following model inference, a post-inference pipeline was applied to generate higher-level football analytics. Through this pipeline, object identities, pitch-referenced player locations, team assignments, ball possession, pass events, and player speed estimates could be derived from the lower-level model outputs.
 
-\subsubsection{Multi-object Tracking}
+\subsubsection{Multi-Object Tracking}
 
-Object detections for players, goalkeepers, referees, and the ball were maintained across frames using the ByteTrack multiple-object tracking algorithm \cite{zhang2022bytetrack}. This allowed the system to assign a persistent identity to each detected object over time. ByteTrack was particularly suitable for this task because it does not rely only on high-confidence detections, and instead attempts to recover any unmatched tracks using lower-confidence detections. This helps maintain track continuity during short occlusions, missed detections, or brief drops in detector confidence, which are common in soccer footage due to player overlap, rapid motion, and small object size. A simplified version of the ByteTrack association process is outlined in Algorithm~\ref{alg:bytetrack} below.
+Object detections for players, goalkeepers, referees, and the ball were maintained across frames using the ByteTrack multiple-object tracking algorithm, allowing the system to assign a persistent identity to each detected object over time \cite{zhang2022bytetrack}. ByteTrack was particularly suitable for this task because it does not rely only on high-confidence detections, and instead attempts to recover any unmatched tracks using lower-confidence detections. This helps maintain track continuity during short occlusions, missed detections, or brief drops in model confidence, which are common in soccer footage due to player overlap, rapid motion, and small object size. A simplified version of the ByteTrack association process is outlined in Algorithm~\ref{alg:bytetrack} below.
 
   
 \begin{algorithm}[H]
 \caption{Simplified ByteTrack association process \cite{zhang2022bytetrack}}
 \label{alg:bytetrack}
 
-\small
+\footnotesize
 \begin{algorithmic}[1]
-\Require tracks, detections
-\State pred\_tracks = predict\_tracks(tracks)
-\State high\_detects, low\_detects = filter\_detections(detections)
+\Require active\_tracks, detections
+\State pred\_tracks = predict\_tracks(active\_tracks)
+\State high\_conf\_detects, low\_conf\_detects = split\_detections\_by\_confidence(detections)
 
 \Statex
-\State matched\_high, unmatched\_tracks, unmatched\_high = link(pred\_tracks, high\_detects)
-\State update\_tracks(matched\_high)
+\State high\_conf\_matches, unmatched\_tracks, unmatched\_high\_conf = link(pred\_tracks, high\_conf\_detects)
+\State update\_tracks(high\_conf\_matches)
+
 \Statex
-\State matched\_low, unmatched\_tracks, unmatched\_low = link(unmatched\_tracks, low\_detects)
-\State update\_tracks(matched\_low)
+\State low\_conf\_matches, unmatched\_tracks, \_ = link(unmatched\_tracks, low\_conf\_detects)
+\State update\_tracks(low\_conf\_matches)
+
 \Statex
-\For{detection in unmatched\_high}
+\For{detection in unmatched\_high\_conf}
     \State create\_new\_track(detection)
 \EndFor
+
 \Statex
 \For{track in unmatched\_tracks}
     \State mark\_as\_lost(track)
 \EndFor
+
 \Statex
-\State remove\_expired\_tracks(tracks)
+\State remove\_expired\_tracks(active\_tracks)
 \end{algorithmic}
 \end{algorithm}
 
 \subsubsection{Homography Estimation}
 
-To map detected objects from image coordinates to real-world pitch coordinates, the pitch keypoint model outputs were matched to a predefined top-down pitch template based on standard FIFA pitch dimensions. A homography matrix mapping image coordinates to canonical pitch coordinates was then estimated using Random Sample Consensus (RANSAC) \cite{ransac}, providing robustness to missing or incorrectly localised keypoints. The estimated homography was smoothed over time to reduce noise from failed or low-confidence inferences, with the previous valid estimate retained when RANSAC failed to find a stable solution. For player and goalkeeper detections, the bottom-centre point of the bounding box was projected, as this most closely approximates foot placement on the playing surface. For the ball, the bounding-box centre was used.
+To map detected objects from image coordinates to real-world pitch coordinates, the pitch keypoint model outputs were matched to their known corresponding positions on a standard FIFA-dimensioned pitch template. A homography matrix mapping image coordinates to canonical pitch coordinates was then estimated using Random Sample Consensus (RANSAC) \cite{ransac}, providing robustness to missing or incorrectly localised keypoints. The estimated homography was smoothed over time to reduce noise from failed or low-confidence inferences, with the previous valid estimate retained when RANSAC failed to find a stable solution. For player and goalkeeper detections, the bottom-centre point of the bounding box was projected, as this most closely approximates foot placement on the playing surface. For the ball, the bounding-box centre was used.
 
 \subsubsection{Player and Goalkeeper Team Assignment}
 
-Team identity was determined from player appearance using K-means clustering analysis \cite{ZhengLiu2012ColorRecognition}. For each tracked player or goalkeeper, an upper-body crop of their bounding box was extracted, and pitch-like green pixels were suppressed before colour estimation was performed. The dominant jersey colour was then estimated using a two-cluster K-means procedure \cite{ZhengLiu2012ColorRecognition}. The extracted colour for each track was temporally smoothed across frames to avoid noise from blurring, occlusion, and lighting variations. The smoothed colour representation was then compared against manually specified team colours (with separate colour references for outfield players and goalkeepers). This allows a per-player team identity estimate to be maintained across long-form video sequences.
+Team identity was determined from player appearance using K-means clustering analysis \cite{ZhengLiu2012ColorRecognition}. For each tracked player or goalkeeper, an upper-body crop of their bounding box was extracted to isolate the jersey, and pitch-like green pixels were suppressed before colour estimation was performed. The dominant jersey colour was then estimated using a two-cluster K-means procedure \cite{ZhengLiu2012ColorRecognition}. The colour representation was then compared against manually specified team colours (with separate colour references for outfield players and goalkeepers). To account for lighting and broadcast colour variation, a calibration step could be applied over the first few seconds of each video, in which K-means clustering was run on the jersey regions of detected players to shift the manually specified team colour references toward the dominant colours observed in that footage. Together, these steps allow a stable per-player team identity to be maintained across long-form video sequences.
 
 \subsubsection{Possession, Pass, and Speed Estimation}
 
@@ -149,7 +151,7 @@ Ball possession was estimated using the projected top-down coordinates of the ba
 
 Passes could then be recorded when possession changed from one player to a different player on the same team, with smoothing and thresholds again applied to reduce false positives from occlusion. If possession instead changed across teams, the event was treated as the beginning of a new possession sequence rather than a pass.
 
-Player speed was estimated from consecutive 2D pitch positions. For each player, distance moved between frames was converted from pitch pixels to metres and smoothed to calculate distance travelled and speed.
+Player speed could also be estimated from consecutive 2D pitch positions. For each player, distance moved between frames was converted from pitch pixels to metres and smoothed to calculate distance travelled and speed.
 \subsection{Full-Stack System Overview}
 
 Figure~\ref{fig:fullstack_system} illustrates how the trained object detection and pitch keypoint models were integrated with the post-inference pipeline into the proposed full-stack system.
@@ -157,11 +159,9 @@ Figure~\ref{fig:fullstack_system} illustrates how the trained object detection a
 \label{subsec:fullstackstuff}
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth]{images/fullstack.png}
+  \includegraphics[width=\textwidth]{images/fullstack.drawio (1).png}
   \caption{Proposed full-stack system diagram.}
   \label{fig:fullstack_system}
 \end{figure}
 
-Each video frame was passed through both models in sequence, with the resulting detections and keypoints consumed by the tracking, homography, team assignment, and statistic generation stages described in the preceding sections. To allow hardware efficiency to be tuned independently of model compression, inference could be configured to run at a fixed interval rather than on every frame, reducing the effective frame rate at a slight cost to temporal accuracy in the high-level statistics.
-
-With all components of the system defined, a complete framework exists for evaluating both the compression of individual models and the end-to-end performance of the pipeline as a whole. The results of this evaluation are presented in the following section.
+Each video frame is passed through both models in sequence, with the resulting detections and keypoints consumed by the tracking, homography, team assignment, and statistic generation stages described in the preceding sections. To allow hardware efficiency to be tuned independently of model compression, inference can be configured to run at a fixed interval rather than on every frame, reducing the effective frame rate at a slight cost to temporal accuracy in the high-level statistics.

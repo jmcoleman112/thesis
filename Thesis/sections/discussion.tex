@@ -1,5 +1,6 @@
 % !TeX root = ../main.tex
 \section{Discussion and Conclusions}
+\label{sec:discussion}
 
 With the results of the model training, compression, and full-stack system evaluation thoroughly presented,  a higher-level discussion of the findings can be held. The main themes are the feasibility of embedded soccer analysis, the effectiveness and best practices of model compression for this task, and the performance of the proposed full-stack system. The key limitations of the work are then discussed in order to contextualise these findings.
 
@@ -15,6 +16,7 @@ As mentioned earlier, the main remaining barrier to full feasibility is throughp
 Beyond the feasibility of soccer analysis, a key discussion point in this work is the effectiveness of both model choice and compression selection. This can be separated into three main points: the effect of model task on compression, the choice of YOLO11 versus YOLO26, and the effect of model scale on compression.
 
 \subsubsection{Effect of Model Task on Compression}
+\label{task_compression_discussion}
 
 A consistent theme across the results is that object detection and pose estimation respond to compression in different ways, and this separation is the most important factor to consider when selecting compression techniques for a given deployment. 
 

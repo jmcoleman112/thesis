@@ -71,7 +71,7 @@ POINT_ORDER = [
 ]
 
 POINT_LABELS = {
-    "Uncompressed": "PT",
+    "Uncompressed": "Uncompres.",
     "Baseline engine": "Accel.",
     "Baseline FP16": "FP16",
     "Quantized + 960": "75%px",
@@ -91,7 +91,7 @@ POINT_LABELS = {
 }
 
 LABEL_OFFSETS = {
-    "Uncompressed": (-10, -10),
+    "Uncompressed": (0, 10),
     "Baseline engine": (-2, 8),
     "Baseline FP16": (-8, 4),
     "Quantized + 960": (-6, 0),
@@ -114,20 +114,20 @@ POINT_MARKERS: dict[str, str] = {
     "Uncompressed": "o",
     "Baseline engine": "s",
     "Baseline FP16": "D",
-    "Quantized + 960": "s",
-    "Quantized + 768": "^",
+    "Quantized + 960": "^",
+    "Quantized + 768": ">",
     "Pruned + Accelerated": "s",
     "Pruned + 960": "^",
     "Pruned + FP16": "D",
     "Pruned + 960 + FP16": "*",
     "Pruned + INT8": "v",
     "Distilled + Pruned + Accel.": "s",
-    "Distilled + Pruned + FP16": "^",
-    "Distilled + Pruned + INT8": "D",
+    "Distilled + Pruned + FP16": "D",
+    "Distilled + Pruned + INT8": "v",
     "Distilled + Accelerated": "s",
     "Distilled + 960": "^",
     "Distilled + FP16": "D",
-    "Distilled + INT8": "*",
+    "Distilled + INT8": "v",
 }
 
 PATHS = [
@@ -513,7 +513,7 @@ def build_figure(points: dict[str, tuple[float, float, int]]):
         color = GROUP_COLORS[group_key(label)]
         marker = POINT_MARKERS.get(label, "o")
         base_size = 70 if label in {"Uncompressed", "Baseline engine"} else 60
-        size = base_size * 2.0 if marker == "*" else base_size
+        size = base_size * 1.4 if marker == "*" else base_size
         ax.scatter(
             latency,
             map_value,
@@ -537,7 +537,7 @@ def build_figure(points: dict[str, tuple[float, float, int]]):
             textcoords="offset points",
             ha="center" if offset[0] == 0 else ("left" if offset[0] > 0 else "right"),
             va="bottom" if offset[1] > 0 else "top",
-            fontsize=6.9,
+            fontsize=8.5,
             color=color,
             weight="bold",
             zorder=5,
