@@ -1,0 +1,476 @@
+==================================================
+THESIS PROOFREADING AND TECHNICAL REVIEW REPORT
+==================================================
+
+Repository root: c:\Users\Student\VSCodeProjects\thesis
+Main file reviewed: Thesis/main.tex
+Files reviewed:
+- Thesis/main.tex
+- Thesis/preamble.tex
+- Thesis/title.tex
+- Thesis/acknowledgements.tex
+- Thesis/sections/abstract.tex
+- Thesis/sections/lay_abstract.tex
+- Thesis/sections/introduction.tex
+- Thesis/sections/literature.tex
+- Thesis/sections/methodology.tex
+- Thesis/sections/results.tex
+- Thesis/sections/discussion.tex
+- Thesis/sections/impact.tex
+- Thesis/sections/future_work.tex
+- Thesis/sections/appendices.tex
+- Thesis/references.bib
+- Thesis/tables/object_technique_summary.tex
+- Thesis/tables/object_combo_summary.tex
+- Thesis/tables/pose_technique_summary.tex
+- Thesis/tables/pose_combo_summary.tex
+- Thesis/tables/model_summaries_appendix.tex
+- Thesis/images/fullstack.tex
+
+SUMMARY
+- Total definite issues: 42
+- Total likely issues: 24
+- Total possible technical concerns requiring author verification: 12
+- Total American English usages flagged: 3
+- Notes on overall consistency:
+  The thesis is well-written overall, with clear structure and logical flow.
+  The main recurring issues are: (a) inconsistent formatting of the
+  mAP_{50-95} subscript across files (at least four distinct LaTeX
+  encodings used); (b) mixed use of "soccer" and "football" terminology;
+  (c) inconsistent hyphenation of "full-stack" / "full stack" / "fullstack";
+  (d) several typos in key passages; (e) a few citation errors where the
+  wrong bibliographic entry is referenced; (f) inconsistent figure caption
+  placement (above vs. below).
+
+
+ISSUES BY FILE
+$\mathrm{mAP}_{50\text{-}95}$
+
+========================================================================
+FILE: Thesis/sections/discussion.tex
+========================================================================
+
+
+Issue 63
+Type: Grammar
+Severity: Likely
+Location: Line 59
+Original:
+"a major source of error of the object detection models"
+Problem:
+"Source of error of" is awkward; "in" is more natural.
+Suggested change:
+"a major source of error in the object detection models"
+Reason:
+Idiomatic preposition usage.
+
+========================================================================
+FILE: Thesis/sections/impact.tex
+========================================================================
+
+Issue 64
+Type: Grammar
+Severity: Likely
+Location: Line 4
+Original:
+"both in terms of ease of technical access and in sustainability"
+Problem:
+Faulty parallel structure after "both...and".
+Suggested change:
+"both in terms of ease of technical access and in terms of
+sustainability" or "in terms of both ease of technical access
+and sustainability"
+Reason:
+Parallel structure.
+
+Issue 65
+Type: Punctuation
+Severity: Definite
+Location: Line 20
+Original:
+"Roboflow\cite{roboflow}"
+Problem:
+Missing space before \cite.
+Suggested change:
+"Roboflow \cite{roboflow}"
+Reason:
+Typographic error.
+
+Issue 66
+Type: Grammar
+Severity: Definite
+Location: Line 24
+Original:
+"even not at scale, the difference between a cloud-dependent and an
+edge-based deployment"
+Problem:
+"even not at scale" is grammatically incomplete. It should be
+"even if not at scale" or "even when not at scale".
+Suggested change:
+"Even if not at scale, the difference between a cloud-dependent and
+an edge-based deployment"
+Reason:
+Missing conjunction.
+
+Issue 67
+Type: Consistency
+Severity: Likely
+Location: Line 20
+Original:
+"Football-Analytics"
+Problem:
+Hyphenated "Football-Analytics" here, but referred to without a
+hyphen ("Football Analytics") elsewhere in the thesis.
+Suggested change:
+"Football Analytics" (no hyphen), consistent with other references.
+Reason:
+Name consistency.
+
+Issue 68
+Type: Style / Capitalisation
+Severity: Likely
+Location: Line 24
+Original:
+"even not at scale" (sentence starts with lowercase after a full stop)
+Problem:
+If this begins a new sentence, "even" should be capitalised to "Even".
+Suggested change:
+"Even if not at scale, the difference..."
+Reason:
+Sentence-initial capitalisation (if new sentence) or restructure
+to connect with the previous sentence.
+
+========================================================================
+FILE: Thesis/sections/future_work.tex
+========================================================================
+
+Issue 69
+Type: Clarity
+Severity: Verify
+Location: Line 4
+Original:
+"these include investigating alternative computer vision model
+architectures, exploring different full-stack system structures,
+evaluating the approach on a wider range of edge devices, and
+applying the methodology to other structurally similar sports"
+Problem:
+No issues with grammar, but the sentence is very long. Consider
+splitting or using a bulleted list for readability.
+Suggested change:
+No change strictly required; consider restructuring for readability.
+Reason:
+Readability.
+
+========================================================================
+FILE: Thesis/sections/appendices.tex
+========================================================================
+
+Issue 70
+Type: Grammar
+Severity: Definite
+Location: Line 14
+Original:
+"Is there any spelling or grammar mistakes in this?"
+Problem:
+"Is there" does not agree with the plural "mistakes". Should be
+"Are there".
+Suggested change:
+"Are there any spelling or grammar mistakes in this?"
+Reason:
+Subject-verb agreement.
+
+Issue 71
+Type: Clarity
+Severity: Likely
+Location: Line 28
+Original:
+"this use of AI was limited entirely to literature support,
+grammar/spell checks"
+Problem:
+"Literature support" is vague and unclear.
+Suggested change:
+"this use of AI was limited entirely to literature comprehension
+support, grammar and spelling checks" (or clarify what "literature
+support" means)
+Reason:
+Clarity.
+
+========================================================================
+FILE: Thesis/references.bib
+========================================================================
+
+Issue 72
+Type: Spelling
+Severity: Definite
+Location: Lines 493-496 (entry: my_conference_paper)
+Original:
+"title = {Embedded COmputer Vision Compression Techniques ofr Soccer
+Anaysis (Interim Report)}"
+Problem:
+Three errors: "COmputer" (capitalisation), "ofr" (should be "for"),
+"Anaysis" (should be "Analysis").
+Suggested change:
+"title = {Embedded Computer Vision Compression Techniques for Soccer
+Analysis (Interim Report)}"
+Reason:
+Multiple typos in a bibliography title that will appear in the
+reference list.
+
+Issue 73
+Type: LaTeX / Bibliography
+Severity: Likely
+Location: Lines 417-422 (entry: zhang2022bytetrack)
+Original:
+"@article{zhang2022bytetrack,
+  ...
+  booktitle={Proceedings of the European Conference on Computer Vision
+  (ECCV)},
+  ...
+}"
+Problem:
+Entry type is @article but contains a "booktitle" field, which is
+used for @inproceedings. The booktitle field will likely be ignored
+by BibTeX for @article entries.
+Suggested change:
+Change "@article" to "@inproceedings".
+Reason:
+Correct bibliography entry type.
+
+Issue 74
+Type: Style / Bibliography
+Severity: Likely
+Location: Line 169 (entry key: "inbook")
+Original:
+"@inbook{inbook,"
+Problem:
+The citation key "inbook" is generic and uninformative, making
+bibliography management difficult. It is cited many times throughout
+the thesis as \cite{inbook}.
+Suggested change:
+Rename to a more descriptive key such as "gholami2022quantization".
+Reason:
+Bibliography management best practice.
+
+Issue 75
+Type: Style / Bibliography
+Severity: Likely
+Location: Line 547 (entry key: "unknown")
+Original:
+"@inproceedings{unknown,"
+Problem:
+The citation key "unknown" is generic and uninformative. This entry
+(Hidayatullah et al., 2025) is cited in the thesis and should have
+a descriptive key.
+Suggested change:
+Rename to "hidayatullah2025yolo" or similar.
+Reason:
+Bibliography management best practice.
+
+========================================================================
+FILE: Thesis/tables/model_summaries_appendix.tex
+========================================================================
+
+Issue 76
+Type: Formatting
+Severity: Definite
+Location: Line 16
+Original:
+"\makecell[r]{\textbf{Temp}\\\textbf{(?C)}}"
+Problem:
+The degree symbol renders as "?" in the continuation header. This is
+likely an encoding issue with the degree character (°) vs (\textdegree
+or ^\circ).
+Suggested change:
+"\makecell[r]{\textbf{Temp}\\\textbf{($^\circ$C)}}"
+Reason:
+Character encoding error producing visible artefact.
+
+========================================================================
+FILE: Thesis/images/fullstack.tex
+========================================================================
+
+Issue 77
+Type: Clarity / Terminology
+Severity: Verify
+Location: Line 49
+Original:
+"80\% denotes 80\% structured pruning"
+Problem:
+Ambiguous: does "80% structured pruning" mean 80% of weights were
+removed (20% retained) or 80% were retained (20% removed)? The
+methodology section defines pruning levels as retention levels
+(e.g. "pruned to FLOP retention levels of 90%, 80%, and 70%").
+The table note should match.
+Suggested change:
+"80\% denotes structured pruning to 80\% FLOP retention"
+Reason:
+Ambiguity between pruning amount and retention amount.
+
+
+AMERICAN ENGLISH TO BRITISH ENGLISH SUMMARY
+- "utilizing" -> "utilising" in Thesis/sections/introduction.tex (line 22)
+- "labeling" -> "labelling" in Thesis/sections/literature.tex (line 101)
+- "labeling" -> "labelling" in Thesis/sections/discussion.tex (line 33)
+
+
+GLOBAL CONSISTENCY ISSUES
+
+1. mAP SUBSCRIPT FORMATTING
+   At least four different LaTeX encodings are used for the mAP_{50-95}
+   subscript across the thesis:
+   (a) $\text{mAP}_{50-95}$ (hyphen in math mode -- renders as minus sign)
+   (b) $\text{mAP}_{50\text{-}95}$ (hyphen in text mode within math)
+   (c) $\mathrm{mAP}_{50\text{--}95}$ (en-dash in text mode within math)
+   (d) mAP$_{50--95}$ (double hyphen in math mode -- renders as two minus signs)
+   Recommendation: Standardise on one form globally. The most typographically
+   correct form is (c) with \mathrm and an en-dash in text mode.
+
+2. "SOCCER" vs "FOOTBALL" TERMINOLOGY
+   The thesis title and many passages use "soccer", but numerous passages
+   (especially in the literature review, methodology, and impact sections)
+   use "football". These are used interchangeably without an explicit note
+   establishing them as synonyms. Examples:
+   - Title: "Soccer Analysis"
+   - literature.tex caption: "Football Analytics Software Solutions"
+   - methodology.tex: "football broadcast datasets", "football analytics"
+   - impact.tex: "Football clubs, coaches"
+   Recommendation: Add a footnote early (e.g. in the Introduction) stating
+   that "soccer" and "football" are used interchangeably, or standardise
+   on one term.
+
+3. "FULL-STACK" / "FULL STACK" / "FULLSTACK" INCONSISTENCY
+   Three different spellings are used:
+   - "full-stack" (hyphenated, lower-case) -- most common
+   - "Full-Stack" (hyphenated, capitalised) -- in some headings
+   - "Fullstack" (one word) -- in Figure 17 caption (results.tex line 266)
+   - "Full Stack" (two words, no hyphen) -- occasionally
+   Recommendation: Standardise on "full-stack" (hyphenated) as an adjective
+   and "full stack" (two words) as a noun.
+
+4. FIGURE CAPTION PLACEMENT INCONSISTENCY
+   In the literature review (e.g. Figure 4, line 218-222 of literature.tex),
+   \caption is placed after \includegraphics (caption below figure). In the
+   results section (e.g. Figures 5-17), \caption is placed before
+   \includegraphics (caption above figure). Academic convention varies, but
+   placement should be consistent throughout.
+   Recommendation: Choose one placement (above or below) and apply
+   consistently to all figures.
+
+5. DEGREE SYMBOL FORMATTING
+   Temperatures are expressed using at least three formats:
+   - "$85^\circ$" (without C) -- introduction.tex
+   - "85$^\circ$C" -- methodology.tex
+   - "68\textdegree C" -- discussion.tex
+   - "68°C" -- abstract.tex
+   Recommendation: Standardise on "$85\,^\circ\mathrm{C}$" or use the
+   siunitx package for consistent unit formatting.
+
+6. REFERENCE FORMATTING
+   Cross-references to figures and tables are generally consistent ("Figure",
+   "Table", "Section"), but the compression summary tables use the
+   \begin{figure} environment despite containing tabular data alongside
+   plots. This is acceptable but could confuse automated list generation.
+
+7. TENSE CONSISTENCY
+   The thesis predominantly uses passive voice and present tense for
+   describing results ("Figure X shows...", "As can be seen..."), but
+   occasionally shifts to active voice or past tense within the same
+   section. This is minor but worth a consistency pass.
+
+8. "KEY-POINT" vs "KEYPOINT"
+   Most of the thesis uses "keypoint" (one word), but the section heading
+   in literature.tex uses "Key-point Detection" (hyphenated, line 163).
+   Recommendation: Use "keypoint" consistently.
+
+
+TECHNICAL / FACTUAL / LOGICAL CONCERNS TO VERIFY
+
+1. CITATION ERROR: FASTER R-CNN CITED AS RT-DETR
+   (results.tex, line 29)
+   "Faster R-CNN \cite{Zhao2023RTDETR}" -- Zhao2023RTDETR is the RT-DETR
+   paper, not Faster R-CNN. This is almost certainly a citation key mix-up.
+   The correct key for Faster R-CNN is 7485869.
+
+2. CITATION ERROR: TENNIS PAPER CITED FOR SOCCER PITCH KEYPOINTS
+   (literature.tex, line 10)
+   \cite{10846339} points to a paper on tennis analysis, but the surrounding
+   text discusses soccer pitch markings. The intended reference may be
+   IEEE2024PitchKeypoints (defined in references.bib but never cited).
+
+3. GPU ARCHITECTURE CONTRADICTION
+   (literature.tex, lines 247 vs 259)
+   The Jetson Orin Nano is correctly identified as "Ampere 1024-core" in
+   Table 5 (line 247), but incorrectly described as having a "1024-core
+   Maxwell GPU" in the Current Limitations subsection (line 259).
+
+4. FLOPS ACRONYM DEFINITION
+   (literature.tex, line 7)
+   "515B Floating Point Operations Per Inference (FLOPS)" -- FLOPS
+   conventionally means "per Second". The text appears to mean total
+   operations per inference, for which the correct abbreviation would be
+   FLOPs (lower-case s). This should be verified and corrected.
+
+5. SIGN/DESCRIPTION MISMATCH IN POSE COMBO RESULTS
+   (results.tex, line 71)
+   "Distilled+Accelerated producing a -0.9% mAP improvement" -- a negative
+   change described as an "improvement" is contradictory. Verify whether
+   the change was positive (an actual improvement) or negative (a cost).
+
+6. POWER LIMITS UNDER MAXN MODE
+   (methodology.tex, lines 77-87 vs introduction.tex, lines 22-24)
+   The introduction establishes limits based on 80% of 25W = 20W. However,
+   the methodology notes that MAXN mode "does not have a fixed power limit".
+   The 25W figure comes from the 25W power mode, not MAXN. Verify whether
+   the 25W baseline is still appropriate for MAXN mode. The Jetson Orin
+   Nano Super Developer Kit has different power profiles from the standard
+   module; ensure the quoted specifications match the exact hardware used.
+
+7. mAP BASELINE DISCREPANCY
+   (literature.tex line 68 vs results.tex line 164)
+   The literature review states that YOLO models can produce "mAP_{50-95}
+   of up to 92%" for soccer object detection. The results section then
+   uses "0.915" as the strong baseline for the 15% threshold calculation.
+   While these could refer to different configurations, the discrepancy
+   (92% vs 91.5%) should be verified or explained.
+
+8. BALL DETECTION RECALL IMPROVEMENT CLAIM
+   (literature.tex, line 326)
+   "increasing resolution from 640px to 1200px has been shown to improve
+   ball detection recall by up to 96%" -- this is ambiguous. Does recall
+   improve by 96 percentage points, improve to 96%, or improve by a factor
+   of 96%? The original source should be checked and the phrasing clarified.
+
+9. PRUNING TERMINOLOGY IN FULL-STACK TABLE
+   (images/fullstack.tex, line 49)
+   "80% denotes 80% structured pruning" is ambiguous. In the methodology,
+   pruning is defined by retention level (80% retention = 20% pruned).
+   The table note could be read as 80% of weights removed. This should be
+   clarified to match the methodology's terminology.
+
+10. YOLO26 TECHNICAL CLAIMS
+    (literature.tex, line 229; discussion.tex, lines 33-35)
+    Several specific architectural claims about YOLO26 (attention mechanism,
+    Progressive Loss Balancing, MuSGD, small-target-aware labelling) are
+    cited to \cite{UltralyticsYOLO}, which is the general Ultralytics
+    documentation. Since YOLO26 is very recent, verify that these
+    architectural details are accurately described and properly sourced.
+
+11. KNOWLEDGE DISTILLATION LATENCY ARTEFACT
+    (results.tex, lines 48-49; results.tex, line 65)
+    The text attributes negative latency changes for distillation to an
+    "inefficient use of PyTorch to implement knowledge distillation" and
+    says this "does not materially affect the quality of analysis". This
+    claim should be verified -- if the PyTorch implementation was genuinely
+    inefficient, this may also have affected the distillation training
+    quality, not just inference speed.
+
+12. SINGLE-VIDEO EVALUATION LIMITATION
+    (results.tex, line 236)
+    The full-stack evaluation uses a single 10-minute video. While this is
+    acknowledged as a limitation, the claims about pass mAP approaching
+    the SoccerNet baseline should be qualified more strongly given the
+    single-sample evaluation. Statistical confidence in the reported
+    metrics cannot be established from one video.
+
+
+END OF REPORT
