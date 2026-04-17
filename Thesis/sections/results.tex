@@ -68,7 +68,7 @@ With individual techniques analysed for the keypoint models, the way the effects
 
 \input{tables/pose_combo_summary}
 
-Figure \ref{fig:pose_combo_summary} indicates that the combination of distillation and pruning performs remarkably well for keypoint models: Distill+Prune+Accelerated achieves only a \textbf{-0.1\%} mAP$_{50\text{--}95}$ reduction with an \textbf{44.2\%} latency improvement, and Distill+Prune+FP16 achieves just \textbf{-0.3\%} mAP$_{50\text{--}95}$ reduction with a \textbf{56.4\%} latency improvement. Distillation alone also appears beneficial for keypoint models, with Distilled+Accelerated producing a \textbf{-0.9\%} mAP$_{50\text{--}95}$ change alongside a \textbf{36.3\%} latency reduction.
+Figure \ref{fig:pose_combo_summary} indicates that the combination of distillation and pruning performs remarkably well for keypoint models: Distill+Prune+Accelerated achieves only a \textbf{-0.2\%} mAP$_{50\text{--}95}$ reduction with an \textbf{44.2\%} latency improvement, and Distill+Prune+FP16 achieves just \textbf{-0.3\%} mAP$_{50\text{--}95}$ reduction with a \textbf{56.4\%} latency improvement. Distillation alone also appears beneficial for keypoint models, with Distilled+Accelerated producing a \textbf{-0.9\%} mAP$_{50\text{--}95}$ change alongside a \textbf{36.3\%} latency reduction.
 
 As with object detection, INT8 and aggressive input resolution reduction produce the largest latency improvements (\textbf{82.8\%} at 640px) but at severe accuracy costs (\textbf{-54.9\%}), making these paths unlikely to be viable for pitch keypoint estimation in most deployment scenarios. Hardware acceleration and FP16 quantisation remain the most reliable starting points, and light distillation with light pruning may also be an effective strategy.
 
@@ -199,7 +199,7 @@ With the best object detection models identified, the same selection criteria ca
     \vspace{5pt}
         \begin{minipage}{\linewidth}
         \raggedright
-        {\footnotesize \textit{Note: In above, p90 refers to pruning to 90\% retention. 960/768/640 refer to input resolution reduction to 75\%, 60\%, and 50\% respectively. ``from'' indicates distilation from the parent model (on the right). }}
+        {\footnotesize \textit{Note: In above, p90 refers to pruning to 90\% retention. 960/768/640 refer to input resolution reduction to 75\%, 60\%, and 50\% respectively. ``from'' indicates distillation from the parent model (on the right). }}
     \end{minipage}
 \end{figure}
 
