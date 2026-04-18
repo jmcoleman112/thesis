@@ -91,7 +91,7 @@ POINT_LABELS = {
 }
 
 LABEL_OFFSETS = {
-    "Uncompressed": (0, 10),
+    "Uncompressed": (-1, 8),
     "Baseline engine": (-2, 8),
     "Baseline FP16": (-8, 4),
     "Quantized + 960": (-6, 0),

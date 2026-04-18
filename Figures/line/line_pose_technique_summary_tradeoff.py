@@ -80,7 +80,7 @@ POINT_ORDER = [
 ]
 
 ANNOTATIONS = {
-    "Uncompressed": ("Uncomp.", (0, 8)),
+    "Uncompressed": ("Uncompres.", (0, 8)),
     "Baseline engine": ("Accel.", (0, 10)),
 }
 
